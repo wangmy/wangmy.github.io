@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>底层学习 on YoyoWong</title>
+    <link>https://wangmingyou.github.io/categories/%E5%BA%95%E5%B1%82%E5%AD%A6%E4%B9%A0/</link>
+    <description>Recent content in 底层学习 on YoyoWong</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 15 Jan 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/categories/%E5%BA%95%E5%B1%82%E5%AD%A6%E4%B9%A0/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>消息发送源码学习</title>
+      <link>https://wangmingyou.github.io/p/objc_msgsend/</link>
+      <pubDate>Wed, 15 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://wangmingyou.github.io/p/objc_msgsend/</guid>
+      <description>入口 objc_msgSend 提出疑问 方法 -&amp;gt; 消息， 如何发送的？
+sel-imp 方法编译为函数默认有两个参数 （id self， SEL _cmd）
+self: 消息接受者
+_cmd: 方法编号， 找到具体函数实现
+目录 （SEL），页码（IMP： 指向函数具体实现的指针），具体内容（函数实现 ）
+如何从SEL 找到 IMP
+汇编，断点查看  
+libobjc源码分析 进入汇编查找过程 objc-msg-arm64 ENTRY _objc_msgSend
+CacheLookup  CacheLookup, 有缓存列表   CacheHit，找到返回  直接从寄存器获取
+CheckMiss，没找到  正常就是用Normal进来的，所以走__objc_msgSend_uncached
+c. add 添加进去，方便下次操作
+MethodTableLookup 我们都知道OC的对象最终汇编成结构体，结构体是Class，也就是objc_class
+由此可以看到在结构体里面有： 方法列表，属性列表，协议列表
+runtime 是由 C, C++, 汇编混合提供运行时功能， 所以搜索删除一个&amp;quot;_&amp;quot;, 搜索&amp;quot;_class_lookupMethodAndLoadCache3&amp;quot;
+进入C/C++函数方法 查找过程 此时已经离开汇编过程（快速），从lookUpImpOrForward开始进入慢速查找过程
+cls： Class 类对象
+cls类对象
+实例对象
+元类对象
+继承关系实现 实际应用  NSObject 分类添加方法，防止崩溃 网络获取数据，可能int/string，int.</description>
+    </item>
+    
+  </channel>
+</rss>

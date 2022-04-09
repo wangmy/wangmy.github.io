@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mac on YoyoWong</title>
+    <link>https://wangmingyou.github.io/tags/mac/</link>
+    <description>Recent content in Mac on YoyoWong</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 15 Jan 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/tags/mac/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Mac切换Python版本</title>
+      <link>https://wangmingyou.github.io/p/mac-change-pyhton/</link>
+      <pubDate>Sat, 15 Jan 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://wangmingyou.github.io/p/mac-change-pyhton/</guid>
+      <description>Mac切换Python版本 找到安装的mac路径  系统自带的：/System/Library/Frameworks/Python.framework 自己安装的python3: /usr/local/Cellar/python@3.9/3.9.6/Frameworks/Python.framework
+ 修改配置文件   找到根目录下的***.zshrc*** 或者 .bash_profile  
+  修改文件 将如下内容添加到文件中,根据需求设置默认python版本
+  # python 配置 alias python=&#39;/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7&#39; # alias python=&#39;/usr/local/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/bin/python3.9&#39; 保存文件，在命令行执行source ~/.zshrc 或者 source ~/.bash_profile，是修改的内容生效
+查看生效后的python版本 在命令行执行python --version，查看版本。</description>
+    </item>
+    
+  </channel>
+</rss>
