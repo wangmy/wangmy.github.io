@@ -1,0 +1,1548 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>iOS on YoyoWong</title>
+        <link>https://wangmingyou.github.io/zh-cn/categories/ios/</link>
+        <description>Recent content in iOS on YoyoWong</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>zh</language>
+        <lastBuildDate>Fri, 25 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/zh-cn/categories/ios/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>iOS应用程序加载</title>
+        <link>https://wangmingyou.github.io/zh-cn/p/ios-app-launch/</link>
+        <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/zh-cn/p/ios-app-launch/</guid>
+        <description>&lt;img src="https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/app_launch.png" alt="Featured image of post iOS应用程序加载" /&gt;&lt;h1 id=&#34;ios应用程序加载&#34;&gt;iOS应用程序加载&lt;/h1&gt;
+&lt;h2 id=&#34;前言&#34;&gt;前言&lt;/h2&gt;
+&lt;p&gt;这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。&lt;/p&gt;
+&lt;h2 id=&#34;基础概念&#34;&gt;基础概念&lt;/h2&gt;
+&lt;h3 id=&#34;冷启动&#34;&gt;冷启动&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/1.png&#34;
+	width=&#34;2418&#34;
+	height=&#34;472&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;冷启动&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;512&#34;
+		data-flex-basis=&#34;1229px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;通常说的启动，也是指的冷启动；启动优化大部分也是做冷启动部分的性能优化
+暂且可以把冷启动分为几个阶段：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;T1: main之前，加载App可执行文件到内存，然后执行一系列的加载&amp;amp;链接等工作，最后执行到main()函数&lt;/li&gt;
+&lt;li&gt;T2: main之后，didFinishLaunching之前，这部分开发是可以监听到的&lt;/li&gt;
+&lt;li&gt;T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;热启动&#34;&gt;热启动&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/2.png&#34;
+	width=&#34;1926&#34;
+	height=&#34;224&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;热启动&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;859&#34;
+		data-flex-basis=&#34;2063px&#34;
+	
+&gt;
+热启动的阶段和状态都是可监听的，不做过多介绍。&lt;/p&gt;
+&lt;h3 id=&#34;应用程序的状态&#34;&gt;应用程序的状态&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;启动程序
+willFinishLaunchingWithOptions
+didFinishLaunchingWithOptions
+applicationDidBecomeActive
+
+按下home键
+applicationWillResignActive
+applicationDidEnterBackground
+
+双击home键，再打开程序
+applicationWillEnterForeground
+applicationDidBecomeActive
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id=&#34;简单理解编译过程&#34;&gt;简单理解编译过程&lt;/h2&gt;
+&lt;p&gt;应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/3.png&#34;
+	width=&#34;1140&#34;
+	height=&#34;894&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;编译过程&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;127&#34;
+		data-flex-basis=&#34;306px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;静态库&#34;&gt;静态库&lt;/h3&gt;
+&lt;p&gt;比如： .a, .lib
+在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/4.png&#34;
+	width=&#34;978&#34;
+	height=&#34;364&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;静态库&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;268&#34;
+		data-flex-basis=&#34;644px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;动态库&#34;&gt;动态库&lt;/h3&gt;
+&lt;p&gt;比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc
+动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/5.png&#34;
+	width=&#34;1144&#34;
+	height=&#34;570&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;动态库&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;200&#34;
+		data-flex-basis=&#34;481px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;快速定位核心源码入口&#34;&gt;快速定位核心源码入口&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start:
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/6.png&#34;
+	width=&#34;1280&#34;
+	height=&#34;800&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;main断点&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;根据已有常识，还有一个特殊方法 + load（或+ (void)initialize）方法，在此断点
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/7.png&#34;
+	width=&#34;1280&#34;
+	height=&#34;800&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;load断点&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;初探结论：_dyld_start  -&amp;gt; +load  -&amp;gt; main -&amp;gt; +initialize&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;接下来就跟着dyld源码 初步搜索 _dyld_start&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;源码学习小Tips&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;OC 底层是 C/C++/汇编 所以源码常见搜索技巧：&lt;em&gt;XXXX(或者删除&lt;/em&gt;)   XXXX::    ::XXXX  XXXX(&lt;/li&gt;
+&lt;li&gt;主逻辑很可能在 if else 判断 ； while / do-while； for 里面&lt;/li&gt;
+&lt;li&gt;通过返回值 - 定位核心逻辑 （尤其汇编，重点关注bl）&lt;/li&gt;
+&lt;li&gt;看官方源码，多关注有注释的地方；&lt;/li&gt;
+&lt;li&gt;抓主干，跳过类似 check / if-return逻辑；跳过预编译非主架构逻辑（ios架构：arm64）&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;搜索__dyld_start,只看arm64下的
+&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/8.png&#34;
+	width=&#34;3072&#34;
+	height=&#34;1920&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;dyld_start汇编入口&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;
+看不懂汇编没关系，看后面的注释，大概能明白其含义，直到出现bl跳转，再结合其注释，基本定位到核心代码：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// call dyldbootstrap::start(app_mh, argc, argv, slide, dyld_mh, &amp;amp;startGlue)
+	bl	__ZN13dyldbootstrap5startEPK12macho_headeriPPKclS2_Pm
+	mov	x16,x0                  // save entry point address in x16
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;搜索 &lt;code&gt;dyldbootstrap::star&lt;/code&gt;，&lt;code&gt;::start&lt;/code&gt; 未果，猜测C方法，搜索&lt;code&gt;start(&lt;/code&gt; ，确定&lt;code&gt;dyld - star&lt;/code&gt; 最终入口函数。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/9.png&#34;
+	width=&#34;3072&#34;
+	height=&#34;1920&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;dyld_star最终入口函数&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;
+这样首先可以确认最终入口方法&lt;code&gt;uintptr_t start(...)&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;入口函数-uintptr_t-start&#34;&gt;入口函数 uintptr_t start(&amp;hellip;)&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;intptr_t start(const struct macho_header* appsMachHeader, int argc, const char* argv[], 
+				intptr_t slide, const struct macho_header* dyldsMachHeader,
+				uintptr_t* startGlue)
+{
+			// rebaseDyldIfNeeded
+    	// mach_init
+    	// apple_guard_setup
+    
+    	return dyld::_main(appsMachHeader, appsSlide, argc, argv, envp, apple, startGlue);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id=&#34;核心函数-dyld_main&#34;&gt;核心函数 dyld::_main&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;28
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;29
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;30
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;31
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;32
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;33
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;34
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;35
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;36
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;37
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;38
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;39
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;40
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;41
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;42
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;43
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;44
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;45
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;uintptr_t _main(const macho_header* mainExecutableMH, uintptr_t mainExecutableSlide,
+                int argc, const char* argv[], const char* envp[], const char* apple[], 
+                uintptr_t* startGlue) {
+    // settupEnv 环境变量的相关处理
+        ...
+        checkEnvironmentVariables(envp);
+		defaultUninitializedFallbackPaths(envp);
+        ...
+    // load shared cache（共享缓存处理）
+        ...
+        // load shared cache
+        checkSharedRegionDisable(...);
+        mapSharedCache();
+        ...
+            
+    // 将dyld加到UUID列表
+        ...
+        // add dyld itself to UUID list
+		addDyldImageToUUIDList();
+        ...
+    // ...
+    [1]reloadAllImages:
+        [1.1]mainExecutable ... (实例化主程序)
+    
+    ...
+    // [1.2]load any inserted libraries (加载任何插入动态库)
+    if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
+        for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
+            loadInsertedDylib(*lib);
+    }
+    ...
+        
+    // [1.3.1]link main executable (链接库)
+    link(sMainExecutable, sEnv.DYLD_BIND_AT_LAUNCH, true, ImageLoader::RPathChain(NULL, NULL), -1);
+    ...
+    // [1.3.2]link any inserted libraries
+    
+    // [2]run all initializers (运行所有初始化程序)
+	initializeMainExecutable();
+    
+    // [3]notify any montoring proccesses that this process is about to enter main()
+    (通知监听dyld-main)
+    ...
+    notifyMonitoringDyldMain();
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id=&#34;dyld核心源码流程&#34;&gt;dyld核心源码流程&lt;/h2&gt;
+&lt;h3 id=&#34;1-reloadallimages&#34;&gt;1. reloadAllImages&lt;/h3&gt;
+&lt;h4 id=&#34;11-实例化主程序&#34;&gt;1.1 实例化主程序&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;static ImageLoaderMachO* instantiateFromLoadedImage(const macho_header* mh, uintptr_t slide, const char* path)
+{
+	// try mach-o loader
+	if ( isCompatibleMachO((const uint8_t*)mh, path) ) {
+		ImageLoader* image = ImageLoaderMachO::instantiateMainExecutable(mh, slide, path, gLinkContext);
+		addImage(image);
+		return (ImageLoaderMachO*)image;
+	}
+	...
+}
+
+// create image for main executable
+ImageLoader* ImageLoaderMachO::instantiateMainExecutable(const macho_header* mh, uintptr_t slide, const char* path, const LinkContext&amp;amp; context)
+{
+   ....
+	bool compressed;
+	unsigned int segCount; // 段的数量
+	unsigned int libCount; // lib库的数量
+	...
+	sniffLoadCommands(mh, path, false, &amp;amp;compressed, &amp;amp;segCount, &amp;amp;libCount, context, &amp;amp;codeSigCmd, &amp;amp;encryptCmd);
+	// instantiate concrete class based on content of load commands
+	...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;instantiateFromLoadedImage&lt;/code&gt; -&amp;gt; &lt;code&gt;instantiateMainExecutable&lt;/code&gt; -&amp;gt; &lt;code&gt;sniffLoadCommands&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;addImage&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;12-加载任何插入动态库&#34;&gt;1.2 加载任何插入动态库&lt;/h4&gt;
+&lt;p&gt;在uintptr_t _main(&amp;hellip;) 函数有如下核心流程&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// load any inserted libraries
+if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
+	for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
+		loadInsertedDylib(*lib);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;loadInsertedDylib&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// 使用动态库注入代码可以参考这个
+static void loadInsertedDylib(const char* path)
+{
+	ImageLoader* image = NULL;
+	unsigned cacheIndex;
+	try {
+		LoadContext context;
+        context.useSearchPaths		= false;
+		...
+		image = load(path, context, cacheIndex);
+	}
+	catch (const char* msg) {
+		...
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;这样就完成了将lib库以镜像文件的形式加载进来了，并生成对应的Image，只需要在合适的地方进行映射即可。&lt;/p&gt;
+&lt;h4 id=&#34;13-链接库&#34;&gt;1.3 链接库&lt;/h4&gt;
+&lt;p&gt;在uintptr_t _main(&amp;hellip;) 函数有如下核心流程&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// link any inserted libraries
+// do this after linking main executable so that any dylibs pulled in by inserted 
+// dylibs (e.g. libSystem) will not be in front of dylibs the program uses
+if ( sInsertedDylibCount &amp;gt; 0 ) {
+    for(unsigned int i=0; i &amp;lt; sInsertedDylibCount; ++i) {
+        ImageLoader* image = sAllImages[i+1];
+        link(image, sEnv.DYLD_BIND_AT_LAUNCH, true, ImageLoader::RPathChain(NULL, NULL), -1);
+        image-&amp;gt;setNeverUnloadRecursive();
+    }
+    // only INSERTED libraries can interpose
+    // register interposing info after all inserted libraries are bound so chaining works
+    for(unsigned int i=0; i &amp;lt; sInsertedDylibCount; ++i) {
+        ImageLoader* image = sAllImages[i+1];
+        image-&amp;gt;registerInterposing(gLinkContext);
+    }
+}
+
+...
+// Bind and notify for the inserted images now interposing has been registered
+if ( sInsertedDylibCount &amp;gt; 0 ) {
+    for(unsigned int i=0; i &amp;lt; sInsertedDylibCount; ++i) {
+        ImageLoader* image = sAllImages[i+1];
+        image-&amp;gt;recursiveBind(gLinkContext, sEnv.DYLD_BIND_AT_LAUNCH, true);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h5 id=&#34;1-遍历-link-images&#34;&gt;1. 遍历 link images&lt;/h5&gt;
+&lt;ul&gt;
+&lt;li&gt;根据loadInsertedDylib 后的 sInsertedDylibCount，遍历已经加载的动态库；&lt;/li&gt;
+&lt;li&gt;根据ImageLoaderMachO::instantiateMainExecutable -&amp;gt; sAllImages遍历执行 ImageLoader* image = sAllImages[i+1];；&lt;/li&gt;
+&lt;li&gt;link image
+&lt;ul&gt;
+&lt;li&gt;递归操作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h5 id=&#34;2递归插入加载&#34;&gt;2.递归插入/加载&lt;/h5&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;28
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;29
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;30
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;31
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;32
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;33
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;34
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;35
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;36
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;37
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void ImageLoader::link(const LinkContext&amp;amp; context, bool forceLazysBound, bool preflightOnly, bool neverUnload, const RPathChain&amp;amp; loaderRPaths, const char* imagePath)
+{
+	...
+    // 递归加载
+	this-&amp;gt;recursiveLoadLibraries(context, preflightOnly, loaderRPaths, imagePath);
+	context.notifyBatch(dyld_image_state_dependents_mapped, preflightOnly);
+    ...
+	// 递归刷新依赖库的层级
+	this-&amp;gt;recursiveUpdateDepth(context.imageCount());
+
+    // 符号绑定
+	__block uint64_t t2, t3, t4, t5;
+	{
+        ...
+		this-&amp;gt;recursiveRebase(context);
+		context.notifyBatch(dyld_image_state_rebased, false);
+
+		t3 = mach_absolute_time();
+		if ( !context.linkingMainExecutable )
+			this-&amp;gt;recursiveBindWithAccounting(context, forceLazysBound, neverUnload);
+
+		t4 = mach_absolute_time();
+		if ( !context.linkingMainExecutable )
+			this-&amp;gt;weakBind(context);
+		t5 = mach_absolute_time();
+	}
+    ...
+	this-&amp;gt;recursiveGetDOFSections(context, dofs);
+	context.registerDOFs(dofs);
+	uint64_t t7 = mach_absolute_time();	
+	// interpose any dynamically loaded images
+	if ( !context.linkingMainExecutable &amp;amp;&amp;amp; (fgInterposingTuples.size() != 0) ) {
+		dyld3::ScopedTimer timer(DBG_DYLD_TIMING_APPLY_INTERPOSING, 0, 0, 0);
+		this-&amp;gt;recursiveApplyInterposing(context);
+	}
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id=&#34;2-运行所有初始化程序---run-all-initializers&#34;&gt;2. 运行所有初始化程序 - run all initializers&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;执行所有插入的dylib执行初始化&lt;/li&gt;
+&lt;li&gt;执行主程序初始化&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void initializeMainExecutable()
+{
+    ....
+	// run initialzers for any inserted dylibs
+	ImageLoader::InitializerTimingList initializerTimes[allImagesCount()];
+	initializerTimes[0].count = 0;
+	const size_t rootCount = sImageRoots.size();
+	if ( rootCount &amp;gt; 1 ) {
+		for(size_t i=1; i &amp;lt; rootCount; ++i) {
+			sImageRoots[i]-&amp;gt;runInitializers(gLinkContext, initializerTimes[0]);
+		}
+	}
+	// run initializers for main executable and everything it brings up 
+	sMainExecutable-&amp;gt;runInitializers(gLinkContext, initializerTimes[0]);
+	
+	...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h4 id=&#34;21-runinitializers&#34;&gt;2.1 runInitializers&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void ImageLoader::runInitializers(const LinkContext&amp;amp; context, InitializerTimingList&amp;amp; timingInfo)
+{
+	...
+	processInitializers(context, thisThread, timingInfo, up);
+	context.notifyBatch(dyld_image_state_initialized, false);
+	...
+}
+
+void ImageLoader::processInitializers(const LinkContext&amp;amp; context, mach_port_t thisThread,
+									 InitializerTimingList&amp;amp; timingInfo, ImageLoader::UninitedUpwards&amp;amp; images)
+{
+    // 初始化准备
+    ...
+	// Calling recursive init on all images in images list, building a new list of
+	// uninitialized upward dependencies.
+    // 遍历初始化
+	for (uintptr_t i=0; i &amp;lt; images.count; ++i) {
+        // 递归，一个个初始化
+		images.images[i]-&amp;gt;recursiveInitialization(context, thisThread, images.images[i]-&amp;gt;getPath(), timingInfo, ups);
+	}
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h5 id=&#34;1-recursiveinitialization&#34;&gt;1. recursiveInitialization&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;notifySingle&lt;/code&gt;，通知&lt;code&gt;dyld_image_states&lt;/code&gt;状态的改变
+&lt;code&gt;doInitialization&lt;/code&gt;， 完成初始化&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;28
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;29
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void ImageLoader::recursiveInitialization(const LinkContext&amp;amp; context, mach_port_t this_thread, const char* pathToInitialize,
+										  InitializerTimingList&amp;amp; timingInfo, UninitedUpwards&amp;amp; uninitUps)
+{
+	recursive_lock lock_info(this_thread);
+	recursiveSpinLock(lock_info);
+
+	if ( fState &amp;lt; dyld_image_state_dependents_initialized-1 ) {
+		uint8_t oldState = fState;
+		// break cycles
+		fState = dyld_image_state_dependents_initialized-1;
+		try {
+			// initialize lower level libraries first
+			....
+			
+			// let objc know we are about to initialize this image
+            ....
+			context.notifySingle(dyld_image_state_dependents_initialized, this, &amp;amp;timingInfo);
+			
+			// initialize this image
+			bool hasInitializers = this-&amp;gt;doInitialization(context);
+            // let anyone know we finished initializing this image
+            ....
+			context.notifySingle(dyld_image_state_initialized, this, NULL);
+			....
+		}
+        ...
+	}
+	recursiveSpinUnLock();
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h5 id=&#34;2-doinitialization&#34;&gt;2. doInitialization&lt;/h5&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;28
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;29
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;30
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;31
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;32
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;33
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;bool ImageLoaderMachO::doInitialization(const LinkContext&amp;amp; context)
+{
+    ....
+	// mach-o has -init and static initializers
+	doImageInit(context);
+	doModInitFunctions(context);
+    ....
+}
+
+void ImageLoaderMachO::doModInitFunctions(const LinkContext&amp;amp; context)
+{
+	if ( fHasInitializers ) {
+		const uint32_t cmd_count = ((macho_header*)fMachOData)-&amp;gt;ncmds;
+		const struct load_command* const cmds = (struct load_command*)&amp;amp;fMachOData[sizeof(macho_header)];
+		const struct load_command* cmd = cmds;
+		for (uint32_t i = 0; i &amp;lt; cmd_count; ++i) {
+			if ( cmd-&amp;gt;cmd == LC_SEGMENT_COMMAND ) {
+				for (const struct macho_section* sect=sectionsStart; sect &amp;lt; sectionsEnd; ++sect) {
+					const uint8_t type = sect-&amp;gt;flags &amp;amp; SECTION_TYPE;
+					...
+                    Initializer* inits = (Initializer*)(sect-&amp;gt;addr + fSlide);
+                    ...
+                    for (size_t j=0; j &amp;lt; count; ++j) {
+                        Initializer func = inits[j];
+                        ....
+                    }
+                    ....
+				}
+			}
+			cmd = (const struct load_command*)(((char*)cmd)+cmd-&amp;gt;cmdsize);
+		}
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h5 id=&#34;3-notifysingle&#34;&gt;3. notifySingle&lt;/h5&gt;
+&lt;p&gt;这里&lt;code&gt;(*sNotifyObjCInit)(image-&amp;gt;getRealPath(), image-&amp;gt;machHeader())&lt;/code&gt;;就是获取函数指针地址，执行对应的函数。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;static void notifySingle(dyld_image_states state, const ImageLoader* image, ImageLoader::InitializerTimingList* timingInfo)
+{
+   //dyld::log(&amp;#34;notifySingle(state=%d, image=%s)\n&amp;#34;, state, image-&amp;gt;getPath());
+   ....
+   if ( state == dyld_image_state_mapped ) {
+   	....
+   }
+   if ( (state == dyld_image_state_dependents_initialized) &amp;amp;&amp;amp; (sNotifyObjCInit != NULL) &amp;amp;&amp;amp; image-&amp;gt;notifyObjC() ) {
+   	....
+       (*sNotifyObjCInit)(image-&amp;gt;getRealPath(), image-&amp;gt;machHeader());
+   	....
+   }
+   // mach message csdlc about dynamically unloaded images
+   if ( image-&amp;gt;addFuncNotified() &amp;amp;&amp;amp; (state == dyld_image_state_terminated) ) {
+   	....
+   	notifyMonitoringDyld(true, 1, loadAddress, loadPath);
+   }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;所以到此，可以看出&lt;code&gt;sNotifyObjCInit&lt;/code&gt;是一个c函数指针地址，dyld通过获取到&lt;code&gt;libobjc&lt;/code&gt;函数指针，可以执行到&lt;code&gt;libobjc&lt;/code&gt;里面。
+在dyld源码中全局搜索&lt;code&gt;sNotifyObjCInit&lt;/code&gt;,可以找到&lt;code&gt;sNotifyObjCInit&lt;/code&gt;赋值的地方发生在&lt;code&gt;registerObjCNotifiers&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void registerObjCNotifiers(_dyld_objc_notify_mapped mapped, _dyld_objc_notify_init init, _dyld_objc_notify_unmapped unmapped)
+{
+	// record functions to call
+	sNotifyObjCMapped	= mapped;
+	sNotifyObjCInit		= init;
+	sNotifyObjCUnmapped = unmapped;
+    ...
+	// &amp;lt;rdar://problem/32209809&amp;gt; call &amp;#39;init&amp;#39; function on all images already init&amp;#39;ed (below libSystem)
+	for (std::vector&amp;lt;ImageLoader*&amp;gt;::iterator it=sAllImages.begin(); it != sAllImages.end(); it++) {
+		ImageLoader* image = *it;
+		if ( (image-&amp;gt;getState() == dyld_image_state_initialized) &amp;amp;&amp;amp; image-&amp;gt;notifyObjC() ) {
+			dyld3::ScopedTimer timer(DBG_DYLD_TIMING_OBJC_INIT, (uint64_t)image-&amp;gt;machHeader(), 0, 0);
+			(*sNotifyObjCInit)(image-&amp;gt;getRealPath(), image-&amp;gt;machHeader());
+		}
+	}
+    ...
+}
+void _dyld_objc_notify_register(_dyld_objc_notify_mapped    mapped,
+                                _dyld_objc_notify_init      init,
+                                _dyld_objc_notify_unmapped  unmapped)
+{
+	dyld::registerObjCNotifiers(mapped, init, unmapped);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;进一步在dyld中查找&lt;code&gt;registerObjCNotifiers&lt;/code&gt;,&lt;code&gt;_dyld_objc_notify_register&lt;/code&gt;，可以分析出，这个register函数是extern，并不是在dyld发起调用的。至于到底在哪里调用，后面会详细说明。&lt;/p&gt;
+&lt;h3 id=&#34;3-回调监听&#34;&gt;3. 回调监听&lt;/h3&gt;
+&lt;h4 id=&#34;1-猜测流程&#34;&gt;1. 猜测流程&lt;/h4&gt;
+&lt;p&gt;到此可以猜测，&lt;code&gt;dyld -&amp;gt; libobjc&lt;/code&gt;  的方式是通过这种函数指针的方式进行通信, 应该是&lt;code&gt;libobjc&lt;/code&gt;在某个地方进行了&lt;code&gt;registerObjCNotifiers&lt;/code&gt;，这样&lt;code&gt;dyld start&lt;/code&gt;后，根据上述流程，即可跳转到&lt;code&gt;libobjc&lt;/code&gt;。这种不同库之间 &lt;code&gt;register-notify&lt;/code&gt;的方式进行通信的完成代码调用的，明显代码在一个库里面一行行跟进代码是行不通的。所以接下来需要捋一下思路。&lt;/p&gt;
+&lt;h4 id=&#34;2-提出疑问&#34;&gt;2. 提出疑问&lt;/h4&gt;
+&lt;p&gt;那么现在有两个疑问：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;OC怎么将自己的函数指针传给dyld的呢？&lt;/li&gt;
+&lt;li&gt;OC又是在什么时候完成注册的呢？&lt;/li&gt;
+&lt;li&gt;OC-dyld之间的相互通信是如何配合的呢？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;libobjc-启动核心源码分析&#34;&gt;libobjc 启动核心源码分析&lt;/h2&gt;
+&lt;p&gt;直接从苹果官网下载libobjc源码。&lt;/p&gt;
+&lt;h3 id=&#34;找到-_dyld_objc_notify_register-入口&#34;&gt;找到 _dyld_objc_notify_register 入口&lt;/h3&gt;
+&lt;p&gt;在&lt;code&gt;dyld&lt;/code&gt;源码分析中，能看出&lt;code&gt;libobjc&lt;/code&gt;是通过 调用&lt;code&gt;_dyld_objc_notify_register&lt;/code&gt;来完成注册的。在&lt;code&gt;libobjc&lt;/code&gt;源码中搜索&lt;code&gt;_dyld_objc_notify_register&lt;/code&gt;,发现其在&lt;code&gt;_objc_init&lt;/code&gt;里调用，完成的向&lt;code&gt;dyld&lt;/code&gt;注册函数。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;void _objc_init(void)
+{
+    ....
+    _dyld_objc_notify_register(&amp;amp;map_images, load_images, unmap_image);
+    ....
+}
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;通过&lt;code&gt;_dyld_objc_notify_register(&amp;amp;map_images, load_images, unmap_image) &lt;/code&gt;可以快速解答了前面问题1（什么时候注册）和问题2（如何注册）。 并且我们也能看到&lt;code&gt;dyld&lt;/code&gt;里面的&lt;code&gt;sNotifyObjCInit&lt;/code&gt;即是&lt;code&gt;libobjc&lt;/code&gt;的&lt;code&gt;load_images&lt;/code&gt;函数，&lt;code&gt;sNotifyObjCMapped&lt;/code&gt;是&lt;code&gt;map_images&lt;/code&gt;函数。
+现在又有新的问题产生了，虽然明确了&lt;code&gt;libobjc&lt;/code&gt;向&lt;code&gt;dyld&lt;/code&gt;注册函数发生在&lt;code&gt;_objc_init&lt;/code&gt;里面，但是&lt;code&gt;_objc_init&lt;/code&gt;到底什么时候触发的还是不知道。&lt;/p&gt;
+&lt;h3 id=&#34;build--run-libobjc&#34;&gt;build &amp;amp; run libobjc&lt;/h3&gt;
+&lt;p&gt;然后根据自己的Xcode和系统版本，将libobjc源码build，并run起来。这里就不做详细介绍）&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://wangmy.github.io/p/open_source/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;objc818-canrun for Bigsur, objc838-canrun for Monterey&lt;/a&gt; 在这里可以自己根据当前环境找一个源码尝试跑一个。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;简单的思路就是在github上把源码down下来，然后直接build，那种找不到符号的报错直接先注释，找不到文件的去apple的open source搜索下，如果找到了，就添加到自己的工程下面。基本这样操作完了，就没error了，然后新建一个target, 将objc库添加到target的Dependencies 里面。如下图所示。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/10.jpg&#34;
+	width=&#34;1500&#34;
+	height=&#34;938&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;libobjc源码&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;159&#34;
+		data-flex-basis=&#34;383px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;为了明确&lt;code&gt;_objc_init&lt;/code&gt;的调用时机，简单的思路就是在&lt;code&gt;_objc_init&lt;/code&gt;里面加一个断点，看堆栈。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/11.jpg&#34;
+	width=&#34;1500&#34;
+	height=&#34;938&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;_objc_init堆栈&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;159&#34;
+		data-flex-basis=&#34;383px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;确认基础流程&#34;&gt;确认基础流程&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;dyld&lt;/code&gt; -&amp;gt;&lt;code&gt;libsystem&lt;/code&gt; -&amp;gt;&lt;code&gt;libdispatch&lt;/code&gt; -&amp;gt;&lt;code&gt;libobjc&lt;/code&gt; -&amp;gt;&lt;code&gt;_objc_init&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;从打印的详细堆栈信息看，dyld&lt;code&gt;_dyld_start&lt;/code&gt;-&amp;gt; &amp;hellip;. -&amp;gt;&lt;code&gt;ImageLoaderMachO::doModInitFunction&lt;/code&gt;这个过程的流程正好跟前面dyld 源码分析的过程吻合上了。后面是&lt;code&gt;libSystem.B.dylib libSystem_initializer&lt;/code&gt;(猜测这个过程应该是&lt;code&gt;doModInitFunction&lt;/code&gt;里面调起的) -&amp;gt;&lt;code&gt;libdispatch&lt;/code&gt;-&amp;gt;&lt;code&gt;libobjc&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;在&lt;code&gt;dyld&lt;/code&gt;中的搜索&lt;code&gt;image-&amp;gt;getRealPath()&lt;/code&gt; 基本可以确定&lt;code&gt;libobjc&lt;/code&gt;注册的函数的调用时机。在&lt;code&gt;notifyBatchPartial&lt;/code&gt;和&lt;code&gt;notifySingle&lt;/code&gt;根据&lt;code&gt;dyld_image_states&lt;/code&gt;触发不同的注册函数。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;dyld_image_state_bound 触发 libjobcmap_images
+dyld_image_state_initialized 触发libobjc load_images&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;验证流程---配合libsytem源码libdispatch源码&#34;&gt;验证流程 - 配合libSytem源码，libdispatch源码&lt;/h2&gt;
+&lt;p&gt;在前面&lt;code&gt;dyld&lt;/code&gt;已经分析到了&lt;code&gt;doModInitFunctions&lt;/code&gt;里面&lt;/p&gt;
+&lt;h3 id=&#34;dyld-初始化必须确保先完成-libsystem-初始化&#34;&gt;dyld 初始化必须确保先完成 libSystem 初始化&lt;/h3&gt;
+&lt;p&gt;回到&lt;code&gt;dyld&lt;/code&gt; 的&lt;code&gt;doModInitFunctions&lt;/code&gt;的部分代码&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;....
+Initializer* inits = (Initializer*)(sect-&amp;gt;addr + fSlide);
+....
+Initializer func = inits[j];
+// &amp;lt;rdar://problem/8543820&amp;amp;9228031&amp;gt; verify initializers are in image
+if ( ! this-&amp;gt;containsAddress(stripPointer((void*)func)) ) {
+  dyld::throwf(&amp;#34;initializer function %p not in mapped image for %s\n&amp;#34;, func, this-&amp;gt;getPath());
+}
+if ( ! dyld::gProcessInfo-&amp;gt;libSystemInitialized ) {
+  // &amp;lt;rdar://problem/17973316&amp;gt; libSystem initializer must run first
+  const char* installPath = getInstallPath();
+  if ( (installPath == NULL) || (strcmp(installPath, LIBSYSTEM_DYLIB_PATH) != 0) )
+    dyld::throwf(&amp;#34;initializer in image (%s) that does not link with libSystem.dylib\n&amp;#34;, this-&amp;gt;getPath());
+}
+if ( context.verboseInit )
+  dyld::log(&amp;#34;dyld: calling initializer function %p in %s\n&amp;#34;, func, this-&amp;gt;getPath());
+bool haveLibSystemHelpersBefore = (dyld::gLibSystemHelpers != NULL);
+{
+  dyld3::ScopedTimer(DBG_DYLD_TIMING_STATIC_INITIALIZER, (uint64_t)fMachOData, (uint64_t)func, 0);
+  func(context.argc, context.argv, context.envp, context.apple, &amp;amp;context.programVars);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;可以看到&lt;code&gt;dyld&lt;/code&gt;确实要走并确定先到&lt;code&gt;libSystem&lt;/code&gt;的&lt;code&gt;initializer&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;libsytem-initializer&#34;&gt;libSytem initializer&lt;/h3&gt;
+&lt;p&gt;再到libSystem源码中搜索initializer，确定入口 libSystem_initializer,接下来就是一个个方法跟踪查看，最终可以看出流程为
+libSystem_initializer-&amp;gt; libdispatch_init&lt;/p&gt;
+&lt;h3 id=&#34;libdispatch_init&#34;&gt;libdispatch_init&lt;/h3&gt;
+&lt;p&gt;到libdispatch源码中常规分析思路，最终流程为
+libdispatch_init-&amp;gt; _os_object_init-&amp;gt; _objc_init
+到这里，通过源码也验证了 上述堆栈的流程。&lt;/p&gt;
+&lt;h2 id=&#34;启动完整流程&#34;&gt;启动完整流程&lt;/h2&gt;
+&lt;h3 id=&#34;简化流程图&#34;&gt;简化流程图&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/12.jpg&#34;
+	width=&#34;1722&#34;
+	height=&#34;924&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;简化流程图&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;186&#34;
+		data-flex-basis=&#34;447px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h3 id=&#34;详细流程图&#34;&gt;详细流程图&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/13.png&#34;
+	width=&#34;2736&#34;
+	height=&#34;1654&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;详细流程图&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;165&#34;
+		data-flex-basis=&#34;397px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;实际应用&#34;&gt;实际应用&lt;/h2&gt;
+&lt;h3 id=&#34;main之前---调试--监测&#34;&gt;main之前 - 调试 &amp;amp; 监测&lt;/h3&gt;
+&lt;h4 id=&#34;1-xcode打印pre-main的时间开发环境xcode-dyld_print_statics--1&#34;&gt;1. Xcode打印pre-main的时间：开发环境Xcode DYLD_PRINT_STATICS = 1&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/14.jpg&#34;
+	width=&#34;509&#34;
+	height=&#34;138&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;实际应用1&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;368&#34;
+		data-flex-basis=&#34;885px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;dylid loading time:动态库加载时间，载入动态库,尽可能使用系统库,自定义库，最好不要大于6个（apple推荐）&lt;/li&gt;
+&lt;li&gt;rebase（修正偏移指针 ASLR-修复内部指针） / binding time （外部符号绑定）:（fishhook）&lt;/li&gt;
+&lt;li&gt;Objc set up time， 减少OC类，有统计2万个oc类增加800毫秒，swift比OC的效率更高，删除弃用的类（找工具检测）&lt;/li&gt;
+&lt;li&gt;initializer time load方法 懒加载，尽量放在initialize 去调用&lt;/li&gt;
+&lt;li&gt;slowest initializer:最慢的几个库的时间&lt;/li&gt;
+&lt;li&gt;libsystem:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;2-instrument---systemtrace--timeprofiler&#34;&gt;2. Instrument - SystemTrace / TimeProfiler&lt;/h4&gt;
+&lt;p&gt;会记录启动的一些信息&lt;/p&gt;
+&lt;h4 id=&#34;3-xcode配置linkmap拿到linkmap文件分析&#34;&gt;3. Xcode配置LinkMap，拿到LinkMap文件，分析&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/15.jpg&#34;
+	width=&#34;526&#34;
+	height=&#34;215&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;实际应用2&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;244&#34;
+		data-flex-basis=&#34;587px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h4 id=&#34;4-其他12不推荐开拓思路&#34;&gt;4. 其他（1，2不推荐，开拓思路）&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;定时抓取主线程上的方法调用堆栈（backtrace），计算一段时间里各个方法的耗时。&lt;/li&gt;
+&lt;li&gt;hook objc_msgSend 方法进行hook，掌握所有方法的执行耗时 （libffi, facebook fishhook）&lt;/li&gt;
+&lt;li&gt;在启动的相关时机插入自定义的动态库，配合技术埋点&lt;/li&gt;
+&lt;li&gt;Apple-Metrics（可自定义） 配合分析线上&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+        </item>
+        <item>
+        <title>源码学习</title>
+        <link>https://wangmingyou.github.io/zh-cn/p/open_source/</link>
+        <pubDate>Fri, 18 Feb 2022 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/zh-cn/p/open_source/</guid>
+        <description>&lt;h1 id=&#34;objc-源码&#34;&gt;objc 源码&lt;/h1&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;media/objc818-canrun.zip&#34; &gt;objc818-canrun&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;media/objc838-canrun.zip&#34; &gt;objc838-canrun&lt;/a&gt;&lt;/p&gt;
+</description>
+        </item>
+        <item>
+        <title>消息发送源码学习</title>
+        <link>https://wangmingyou.github.io/zh-cn/p/objc_msgsend/</link>
+        <pubDate>Wed, 15 Jan 2020 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/zh-cn/p/objc_msgsend/</guid>
+        <description>&lt;h1 id=&#34;入口-objc_msgsend&#34;&gt;入口 objc_msgSend&lt;/h1&gt;
+&lt;h2 id=&#34;提出疑问&#34;&gt;提出疑问&lt;/h2&gt;
+&lt;p&gt;方法 -&amp;gt; 消息， 如何发送的？&lt;/p&gt;
+&lt;p&gt;sel-imp 方法编译为函数默认有两个参数 （id self， SEL _cmd）&lt;/p&gt;
+&lt;p&gt;self: 消息接受者&lt;/p&gt;
+&lt;p&gt;_cmd: 方法编号， 找到具体函数实现&lt;/p&gt;
+&lt;p&gt;目录 （SEL），页码（IMP： 指向函数具体实现的指针），具体内容（函数实现 ）&lt;/p&gt;
+&lt;p&gt;如何从SEL 找到 IMP&lt;/p&gt;
+&lt;h2 id=&#34;汇编断点查看&#34;&gt;汇编，断点查看&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618_hu15c7c349cd219dc700813f6d454ddd97_305516_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618_hu15c7c349cd219dc700813f6d454ddd97_305516_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;libobjc源码分析&#34;&gt;&lt;strong&gt;libobjc源码分析&lt;/strong&gt;&lt;/h2&gt;
+&lt;h3 id=&#34;进入汇编查找过程&#34;&gt;进入汇编查找过程&lt;/h3&gt;
+&lt;p&gt;objc-msg-arm64 ENTRY _objc_msgSend&lt;/p&gt;
+&lt;h4 id=&#34;cachelookup&#34;&gt;CacheLookup&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;CacheLookup, 有缓存列表&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;CacheHit，找到返回&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;&lt;strong&gt;直接从寄存器获取&lt;/strong&gt;&lt;/p&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;&lt;strong&gt;CheckMiss，没找到&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;正常就是用Normal进来的，所以走__objc_msgSend_uncached&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;&lt;strong&gt;c. add 添加进去，方便下次操作&lt;/strong&gt;&lt;/p&gt;
+&lt;h4 id=&#34;methodtablelookup&#34;&gt;MethodTableLookup&lt;/h4&gt;
+&lt;p&gt;我们都知道OC的对象最终汇编成结构体，结构体是Class，也就是&lt;strong&gt;objc_class&lt;/strong&gt;&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;由此可以看到在结构体里面有： 方法列表，属性列表，协议列表&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;runtime 是由 C, C++, 汇编混合提供运行时功能， 所以搜索删除一个&amp;quot;_&amp;quot;, 搜索&amp;quot;_class_lookupMethodAndLoadCache3&amp;quot;&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;h3 id=&#34;进入cc函数方法-查找过程&#34;&gt;进入C/C++函数方法 查找过程&lt;/h3&gt;
+&lt;p&gt;此时已经离开汇编过程（快速），从&lt;strong&gt;lookUpImpOrForward开始进入慢速查找过程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;cls： Class 类对象&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;cls类对象&lt;/p&gt;
+&lt;p&gt;实例对象&lt;/p&gt;
+&lt;p&gt;元类对象&lt;/p&gt;
+&lt;h4 id=&#34;继承关系实现&#34;&gt;继承关系实现&lt;/h4&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;h3 id=&#34;实际应用&#34;&gt;实际应用&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;NSObject 分类添加方法，防止崩溃&lt;/li&gt;
+&lt;li&gt;网络获取数据，可能int/string，int.length，不知道方法是什么，应该动态添加&lt;/li&gt;
+&lt;li&gt;遇到崩溃，提示退出页面，上报crash，动态处理&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&#34;动态方法解析&#34;&gt;动态方法解析&lt;/h1&gt;
+&lt;p&gt;TypeEcoding v@: id:self, cmd -&amp;gt; void&lt;/p&gt;
+&lt;h1 id=&#34;消息转发&#34;&gt;消息转发&lt;/h1&gt;
+&lt;p&gt;aspect，消息转发的具体应用&lt;/p&gt;
+&lt;h1 id=&#34;源码跑功能&#34;&gt;源码跑功能&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665_hu15c7c349cd219dc700813f6d454ddd97_181735_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665_hu15c7c349cd219dc700813f6d454ddd97_181735_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;消息发送的流程图&#34;&gt;消息发送的流程图&lt;/h1&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914.png&#34;
+	width=&#34;1692&#34;
+	height=&#34;1574&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914_hu72ba67d9a517d1912b354c46437f9210_150214_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914_hu72ba67d9a517d1912b354c46437f9210_150214_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;107&#34;
+		data-flex-basis=&#34;257px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h1 id=&#34;总结&#34;&gt;总结&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;方法的本质是发送消息，发送消息的几个流程&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;快速查找（objc_msgSend）~ cache_t 缓存消息&lt;/li&gt;
+&lt;li&gt;慢速查找～ 递归自己｜父类～ lookupImpOrForWard&lt;/li&gt;
+&lt;li&gt;查不到消息：动态⽅法解析~ resolveInstanceMethod&lt;/li&gt;
+&lt;li&gt;消息快速转发~ forwardingTargetForSelector&lt;/li&gt;
+&lt;li&gt;消息慢速转发~ methodSignatureForSelector &amp;amp; forwardInvocation&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;sel 是方法编号，在read_images期间就编译进内存&lt;/li&gt;
+&lt;li&gt;imp是函数实现的指针，找imp就是找函数&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;sel 可以理解为书本的目录标题，imp就是书本的页码。查找具体的函数，就是看这本书里面具体的内容，通过想看的标题找到对应的页骂最后翻到具体的内容，即是 sel - 指针(imp) - 具体实现&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        <item>
+        <title>分析 在OC中 [self class] 与 [super class] 的区别</title>
+        <link>https://wangmingyou.github.io/zh-cn/p/super-class-study/</link>
+        <pubDate>Fri, 15 Mar 2019 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/zh-cn/p/super-class-study/</guid>
+        <description>&lt;h1 id=&#34;直接看一段代码&#34;&gt;直接看一段代码&lt;/h1&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;@interface Person : NSObject
+@end
+
+@implementation Person
+@end
+
+@interface Worker : Person
+@end
+
+@implementation Worker
+- (instancetype)init{
+    
+    self = [super init];
+    if (self) {
+        NSLog(@&amp;#34;🦁️ [self class] %@&amp;#34;,NSStringFromClass([self class]));
+        NSLog(@&amp;#34;🦁️ [super class] %@&amp;#34;,NSStringFromClass([super class]));
+    }
+    return self;
+}
+@end
+
+@implementation TestSuperClass
+// 分析 [self class] 与 [super class] 的区别
+- (void) test {
+    Worker *worker = [[Worker alloc] init];
+}
+@end
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id=&#34;打印结果&#34;&gt;打印结果：&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;2022-04-09 19:08:09.612737+0800 Object-CDemo[68945:1164926] 🦁️ [self class] Worker
+2022-04-09 19:08:09.612854+0800 Object-CDemo[68945:1164926] 🦁️ [super class] Worker
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;相信一个打印大家都很好理解，第二个就不好理解了，那么现在主要来分析下 super class&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;在objc 源码中 找到class 的源码实现&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;- (Class)class {
+   /*
+       1. 所有的函数，都有两个默认的隐藏参数：(id self , sel _cmd),  这里的用的self就是第一个隐藏参数，就是消息的接受体
+       2. 现在的关键问题是，隐藏参数self 到底是谁，也就是消息的接受者是谁
+    */
+    return object_getClass(self);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;这里显而易见，所以第一个[self class]的self是worker就显而易见了。那么第二个为什么也是worker呢？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;分析的常见思路&#34;&gt;分析的常见思路&lt;/h2&gt;
+&lt;h3 id=&#34;方法1-clang-看到底底层编译成什么样的源码&#34;&gt;方法1: clang 看到底底层编译成什么样的源码&lt;/h3&gt;
+&lt;h3 id=&#34;方法2-objc源码-run起来直接断点分析分析&#34;&gt;方法2: objc源码 run起来，直接断点分析分析&lt;/h3&gt;
+&lt;h3 id=&#34;方法3-断点汇编--源码配合-分析&#34;&gt;方法3: 断点汇编 + 源码配合 分析&lt;/h3&gt;
+&lt;h3 id=&#34;方法4-nsobject-methodswizzling-class-方法&#34;&gt;方法4: NSObject MethodSwizzling class 方法&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;前两种方法，我觉得都有点麻烦，方法4，MethodSwizzling也只是验证打印结果，对我们分析本质，帮助可能不大，所以我直接选择方法3，快捷还可以分析底层原因。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;断点汇编分析&#34;&gt;断点汇编分析&lt;/h1&gt;
+&lt;h2 id=&#34;首先选择断点的汇编模式&#34;&gt;首先选择断点的汇编模式&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371029886.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371029886_hu15c7c349cd219dc700813f6d454ddd97_206985_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371029886_hu15c7c349cd219dc700813f6d454ddd97_206985_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371254586.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;834&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371254586_hu15c7c349cd219dc700813f6d454ddd97_333785_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/super-class-study/media/16495371254586_hu15c7c349cd219dc700813f6d454ddd97_333785_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;148&#34;
+		data-flex-basis=&#34;356px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这里显而易见  &lt;code&gt;[super class]&lt;/code&gt; 最终走的是objc_msgSendSuper2消息发送，再结合源码。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;objc_msgSendSuper2(struct objc_super * _Nonnull super, SEL _Nonnull op, ...)
+
+#endif
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;// 通过objc源码里面简化 objc_super&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;struct objc_super { 
+    __unsafe_unretained _Nonnull id receiver; //消息接收者
+    __unsafe_unretained _Nonnull Class super_class;
+};
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;也就是&lt;code&gt;NSLog(@&amp;quot;🦁️ [super class] %@&amp;quot;,NSStringFromClass([super class]))&lt;/code&gt; 等同于下面的一段代码&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;6
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// [super class] 等同于下面一段代码
+struct objc_super test_super = {
+      self, // 研究对象是在worker里面
+      class_getSuperclass([self class]),
+};
+NSLog(@&amp;#34;%@&amp;#34;,NSStringFromClass(objc_msgSendSuper2(&amp;amp;test_super,@selector(class))));
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;转化后很好理解了，其实就是给self（worker）发送消息，调用class方法。这样就能理解打印结果了。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;那么-super-class-与-self-class-有什么区别呢&#34;&gt;那么 [super class] 与 [self class] 有什么区别呢&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;虽然现在理解了两者结果一样，那么[super class] 有什么特殊的呢？也就是&lt;code&gt;objc_super&lt;/code&gt; 里面的 &lt;code&gt;class_getSuperclass([self class]),&lt;/code&gt; 存在的意义是什么呢？
+其实本质区别就是&lt;code&gt;objc_msgSendSuper&lt;/code&gt; 与&lt;code&gt;objc_msgSend&lt;/code&gt; 有什么区别?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;objc_msgsend-流程&#34;&gt;objc_msgSend 流程&lt;/h2&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://wangmy.github.io/p/objc_msgsend/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;objc_msgSend具体流程&lt;/a&gt; 可以看到这个objc_msgSend慢速流程回去遍历父类，比较慢，objc_msgSendSuper就可以跳过很多遍历，变得更快了。&lt;/p&gt;
+&lt;h1 id=&#34;结论&#34;&gt;结论&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[self class] 就是发送消息objc_msgSend，消息接受者是 self ⽅法编号：class
+[super class] 本质就是objc_msgSendSuper, 消息的接受者还是 self ⽅法编号：class 逻辑教育 只是objc_msgSendSuper 会更快 直接跳过 self 的查找&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        
+    </channel>
+</rss>

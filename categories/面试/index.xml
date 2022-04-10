@@ -1,20 +1,227 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>面试 on YoyoWong</title>
-    <link>https://wangmingyou.github.io/categories/%E9%9D%A2%E8%AF%95/</link>
-    <description>Recent content in 面试 on YoyoWong</description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-    <lastBuildDate>Fri, 15 Mar 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/categories/%E9%9D%A2%E8%AF%95/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>分析 在OC中 [self class] 与 [super class] 的区别</title>
-      <link>https://wangmingyou.github.io/p/super-class-study/</link>
-      <pubDate>Fri, 15 Mar 2019 00:00:00 +0000</pubDate>
-      
-      <guid>https://wangmingyou.github.io/p/super-class-study/</guid>
-      <description>objc 源码 objc818-canrun objc838-canrun</description>
-    </item>
+    <channel>
+        <title>面试 on YoyoWong</title>
+        <link>https://wangmingyou.github.io/categories/%E9%9D%A2%E8%AF%95/</link>
+        <description>Recent content in 面试 on YoyoWong</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>zh</language>
+        <lastBuildDate>Fri, 15 Mar 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/categories/%E9%9D%A2%E8%AF%95/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>分析 在OC中 [self class] 与 [super class] 的区别</title>
+        <link>https://wangmingyou.github.io/p/super-class-study/</link>
+        <pubDate>Fri, 15 Mar 2019 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/super-class-study/</guid>
+        <description>&lt;h1 id=&#34;直接看一段代码&#34;&gt;直接看一段代码&lt;/h1&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt; 1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 7
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 8
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt; 9
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;10
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;11
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;12
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;13
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;14
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;15
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;16
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;17
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;18
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;19
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;20
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;21
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;22
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;23
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;24
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;25
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;26
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;27
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;@interface Person : NSObject
+@end
+
+@implementation Person
+@end
+
+@interface Worker : Person
+@end
+
+@implementation Worker
+- (instancetype)init{
     
-  </channel>
+    self = [super init];
+    if (self) {
+        NSLog(@&amp;#34;🦁️ [self class] %@&amp;#34;,NSStringFromClass([self class]));
+        NSLog(@&amp;#34;🦁️ [super class] %@&amp;#34;,NSStringFromClass([super class]));
+    }
+    return self;
+}
+@end
+
+@implementation TestSuperClass
+// 分析 [self class] 与 [super class] 的区别
+- (void) test {
+    Worker *worker = [[Worker alloc] init];
+}
+@end
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id=&#34;打印结果&#34;&gt;打印结果：&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;2022-04-09 19:08:09.612737+0800 Object-CDemo[68945:1164926] 🦁️ [self class] Worker
+2022-04-09 19:08:09.612854+0800 Object-CDemo[68945:1164926] 🦁️ [super class] Worker
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;相信一个打印大家都很好理解，第二个就不好理解了，那么现在主要来分析下 super class&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;在objc 源码中 找到class 的源码实现&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;6
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;- (Class)class {
+   /*
+       1. 所有的函数，都有两个默认的隐藏参数：(id self , sel _cmd),  这里的用的self就是第一个隐藏参数，就是消息的接受体
+       2. 现在的关键问题是，隐藏参数self 到底是谁，也就是消息的接受者是谁
+    */
+    return object_getClass(self);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;这里显而易见，所以第一个[self class]的self是worker就显而易见了。那么第二个为什么也是worker呢？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;分析的常见思路&#34;&gt;分析的常见思路&lt;/h2&gt;
+&lt;h3 id=&#34;方法1-clang-看到底底层编译成什么样的源码&#34;&gt;方法1: clang 看到底底层编译成什么样的源码&lt;/h3&gt;
+&lt;h3 id=&#34;方法2-objc源码-run起来直接断点分析分析&#34;&gt;方法2: objc源码 run起来，直接断点分析分析&lt;/h3&gt;
+&lt;h3 id=&#34;方法3-断点汇编--源码配合-分析&#34;&gt;方法3: 断点汇编 + 源码配合 分析&lt;/h3&gt;
+&lt;h3 id=&#34;方法4-nsobject-methodswizzling-class-方法&#34;&gt;方法4: NSObject MethodSwizzling class 方法&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;前两种方法，我觉得都有点麻烦，方法4，MethodSwizzling也只是验证打印结果，对我们分析本质，帮助可能不大，所以我直接选择方法3，快捷还可以分析底层原因。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;断点汇编分析&#34;&gt;断点汇编分析&lt;/h1&gt;
+&lt;h2 id=&#34;首先选择断点的汇编模式&#34;&gt;首先选择断点的汇编模式&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/super-class-study/media/16495371029886.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/p/super-class-study/media/16495371029886_hu15c7c349cd219dc700813f6d454ddd97_206985_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/super-class-study/media/16495371029886_hu15c7c349cd219dc700813f6d454ddd97_206985_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/super-class-study/media/16495371254586.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;834&#34;
+	srcset=&#34;https://wangmingyou.github.io/p/super-class-study/media/16495371254586_hu15c7c349cd219dc700813f6d454ddd97_333785_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/super-class-study/media/16495371254586_hu15c7c349cd219dc700813f6d454ddd97_333785_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;148&#34;
+		data-flex-basis=&#34;356px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这里显而易见  &lt;code&gt;[super class]&lt;/code&gt; 最终走的是objc_msgSendSuper2消息发送，再结合源码。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;objc_msgSendSuper2(struct objc_super * _Nonnull super, SEL _Nonnull op, ...)
+
+#endif
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;// 通过objc源码里面简化 objc_super&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;struct objc_super { 
+    __unsafe_unretained _Nonnull id receiver; //消息接收者
+    __unsafe_unretained _Nonnull Class super_class;
+};
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;也就是&lt;code&gt;NSLog(@&amp;quot;🦁️ [super class] %@&amp;quot;,NSStringFromClass([super class]))&lt;/code&gt; 等同于下面的一段代码&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;div class=&#34;chroma&#34;&gt;
+&lt;table class=&#34;lntable&#34;&gt;&lt;tr&gt;&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code&gt;&lt;span class=&#34;lnt&#34;&gt;1
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;2
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;3
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;4
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;5
+&lt;/span&gt;&lt;span class=&#34;lnt&#34;&gt;6
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class=&#34;lntd&#34;&gt;
+&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;// [super class] 等同于下面一段代码
+struct objc_super test_super = {
+      self, // 研究对象是在worker里面
+      class_getSuperclass([self class]),
+};
+NSLog(@&amp;#34;%@&amp;#34;,NSStringFromClass(objc_msgSendSuper2(&amp;amp;test_super,@selector(class))));
+&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;转化后很好理解了，其实就是给self（worker）发送消息，调用class方法。这样就能理解打印结果了。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;那么-super-class-与-self-class-有什么区别呢&#34;&gt;那么 [super class] 与 [self class] 有什么区别呢&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;虽然现在理解了两者结果一样，那么[super class] 有什么特殊的呢？也就是&lt;code&gt;objc_super&lt;/code&gt; 里面的 &lt;code&gt;class_getSuperclass([self class]),&lt;/code&gt; 存在的意义是什么呢？
+其实本质区别就是&lt;code&gt;objc_msgSendSuper&lt;/code&gt; 与&lt;code&gt;objc_msgSend&lt;/code&gt; 有什么区别?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;objc_msgsend-流程&#34;&gt;objc_msgSend 流程&lt;/h2&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://wangmy.github.io/p/objc_msgsend/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;objc_msgSend具体流程&lt;/a&gt; 可以看到这个objc_msgSend慢速流程回去遍历父类，比较慢，objc_msgSendSuper就可以跳过很多遍历，变得更快了。&lt;/p&gt;
+&lt;h1 id=&#34;结论&#34;&gt;结论&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[self class] 就是发送消息objc_msgSend，消息接受者是 self ⽅法编号：class
+[super class] 本质就是objc_msgSendSuper, 消息的接受者还是 self ⽅法编号：class 逻辑教育 只是objc_msgSendSuper 会更快 直接跳过 self 的查找&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        
+    </channel>
 </rss>

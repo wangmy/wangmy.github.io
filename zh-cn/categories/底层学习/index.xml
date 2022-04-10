@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>底层学习 on YoyoWong</title>
+        <link>https://wangmingyou.github.io/zh-cn/categories/%E5%BA%95%E5%B1%82%E5%AD%A6%E4%B9%A0/</link>
+        <description>Recent content in 底层学习 on YoyoWong</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>zh</language>
+        <lastBuildDate>Wed, 15 Jan 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/zh-cn/categories/%E5%BA%95%E5%B1%82%E5%AD%A6%E4%B9%A0/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>消息发送源码学习</title>
+        <link>https://wangmingyou.github.io/zh-cn/p/objc_msgsend/</link>
+        <pubDate>Wed, 15 Jan 2020 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/zh-cn/p/objc_msgsend/</guid>
+        <description>&lt;h1 id=&#34;入口-objc_msgsend&#34;&gt;入口 objc_msgSend&lt;/h1&gt;
+&lt;h2 id=&#34;提出疑问&#34;&gt;提出疑问&lt;/h2&gt;
+&lt;p&gt;方法 -&amp;gt; 消息， 如何发送的？&lt;/p&gt;
+&lt;p&gt;sel-imp 方法编译为函数默认有两个参数 （id self， SEL _cmd）&lt;/p&gt;
+&lt;p&gt;self: 消息接受者&lt;/p&gt;
+&lt;p&gt;_cmd: 方法编号， 找到具体函数实现&lt;/p&gt;
+&lt;p&gt;目录 （SEL），页码（IMP： 指向函数具体实现的指针），具体内容（函数实现 ）&lt;/p&gt;
+&lt;p&gt;如何从SEL 找到 IMP&lt;/p&gt;
+&lt;h2 id=&#34;汇编断点查看&#34;&gt;汇编，断点查看&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618_hu15c7c349cd219dc700813f6d454ddd97_305516_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495348622618_hu15c7c349cd219dc700813f6d454ddd97_305516_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h2 id=&#34;libobjc源码分析&#34;&gt;&lt;strong&gt;libobjc源码分析&lt;/strong&gt;&lt;/h2&gt;
+&lt;h3 id=&#34;进入汇编查找过程&#34;&gt;进入汇编查找过程&lt;/h3&gt;
+&lt;p&gt;objc-msg-arm64 ENTRY _objc_msgSend&lt;/p&gt;
+&lt;h4 id=&#34;cachelookup&#34;&gt;CacheLookup&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;CacheLookup, 有缓存列表&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;CacheHit，找到返回&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;&lt;strong&gt;直接从寄存器获取&lt;/strong&gt;&lt;/p&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;&lt;strong&gt;CheckMiss，没找到&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;正常就是用Normal进来的，所以走__objc_msgSend_uncached&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;&lt;strong&gt;c. add 添加进去，方便下次操作&lt;/strong&gt;&lt;/p&gt;
+&lt;h4 id=&#34;methodtablelookup&#34;&gt;MethodTableLookup&lt;/h4&gt;
+&lt;p&gt;我们都知道OC的对象最终汇编成结构体，结构体是Class，也就是&lt;strong&gt;objc_class&lt;/strong&gt;&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;由此可以看到在结构体里面有： 方法列表，属性列表，协议列表&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;runtime 是由 C, C++, 汇编混合提供运行时功能， 所以搜索删除一个&amp;quot;_&amp;quot;, 搜索&amp;quot;_class_lookupMethodAndLoadCache3&amp;quot;&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;h3 id=&#34;进入cc函数方法-查找过程&#34;&gt;进入C/C++函数方法 查找过程&lt;/h3&gt;
+&lt;p&gt;此时已经离开汇编过程（快速），从&lt;strong&gt;lookUpImpOrForward开始进入慢速查找过程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;cls： Class 类对象&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;cls类对象&lt;/p&gt;
+&lt;p&gt;实例对象&lt;/p&gt;
+&lt;p&gt;元类对象&lt;/p&gt;
+&lt;h4 id=&#34;继承关系实现&#34;&gt;继承关系实现&lt;/h4&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;h3 id=&#34;实际应用&#34;&gt;实际应用&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;NSObject 分类添加方法，防止崩溃&lt;/li&gt;
+&lt;li&gt;网络获取数据，可能int/string，int.length，不知道方法是什么，应该动态添加&lt;/li&gt;
+&lt;li&gt;遇到崩溃，提示退出页面，上报crash，动态处理&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&#34;动态方法解析&#34;&gt;动态方法解析&lt;/h1&gt;
+&lt;p&gt;TypeEcoding v@: id:self, cmd -&amp;gt; void&lt;/p&gt;
+&lt;h1 id=&#34;消息转发&#34;&gt;消息转发&lt;/h1&gt;
+&lt;p&gt;aspect，消息转发的具体应用&lt;/p&gt;
+&lt;h1 id=&#34;源码跑功能&#34;&gt;源码跑功能&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665.jpg&#34;
+	width=&#34;1240&#34;
+	height=&#34;775&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665_hu15c7c349cd219dc700813f6d454ddd97_181735_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495351497665_hu15c7c349cd219dc700813f6d454ddd97_181735_1024x0_resize_q75_box.jpg 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;160&#34;
+		data-flex-basis=&#34;384px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;消息发送的流程图&#34;&gt;消息发送的流程图&lt;/h1&gt;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914.png&#34;
+	width=&#34;1692&#34;
+	height=&#34;1574&#34;
+	srcset=&#34;https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914_hu72ba67d9a517d1912b354c46437f9210_150214_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/zh-cn/p/objc_msgsend/assets/16495353011914_hu72ba67d9a517d1912b354c46437f9210_150214_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;107&#34;
+		data-flex-basis=&#34;257px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;h1 id=&#34;总结&#34;&gt;总结&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;方法的本质是发送消息，发送消息的几个流程&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;快速查找（objc_msgSend）~ cache_t 缓存消息&lt;/li&gt;
+&lt;li&gt;慢速查找～ 递归自己｜父类～ lookupImpOrForWard&lt;/li&gt;
+&lt;li&gt;查不到消息：动态⽅法解析~ resolveInstanceMethod&lt;/li&gt;
+&lt;li&gt;消息快速转发~ forwardingTargetForSelector&lt;/li&gt;
+&lt;li&gt;消息慢速转发~ methodSignatureForSelector &amp;amp; forwardInvocation&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;sel 是方法编号，在read_images期间就编译进内存&lt;/li&gt;
+&lt;li&gt;imp是函数实现的指针，找imp就是找函数&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;sel 可以理解为书本的目录标题，imp就是书本的页码。查找具体的函数，就是看这本书里面具体的内容，通过想看的标题找到对应的页骂最后翻到具体的内容，即是 sel - 指针(imp) - 具体实现&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        
+    </channel>
+</rss>
