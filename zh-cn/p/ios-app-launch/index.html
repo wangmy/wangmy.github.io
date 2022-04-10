@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" dir="ltr">
+<html lang="English" dir="ltr">
     <head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='iOS应用程序加载 前言 这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。
 基础概念 冷启动  注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。

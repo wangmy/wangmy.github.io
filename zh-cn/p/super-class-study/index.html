@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" dir="ltr">
+<html lang="English" dir="ltr">
     <head><meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='直接看一段代码 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27  @interface Person : NSObject @end @implementation Person @end @interface Worker : Person @end @implementation Worker - (instancetype)init{ self = [super init]; if (self) { NSLog(@&amp;#34;🦁️ [self class] %@&amp;#34;,NSStringFromClass([self class])); NSLog(@&amp;#34;🦁️ [super class] %@&amp;#34;,NSStringFromClass([super class])); } return self; } @end @implementation TestSuperClass // 分析 [self class] 与 [super class] 的区别 - (void) test { Worker *worker = [[Worker alloc] init]; } @end   打印结果： 1 2  2022-04-09 19:08:09.'><title>分析 在OC中 [self class] 与 [super class] 的区别</title>
 
