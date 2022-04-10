@@ -8,19 +8,19 @@
         <language>en</language>
         <lastBuildDate>Fri, 25 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/categories/ios/index.xml" rel="self" type="application/rss+xml" /><item>
         <title>iOS应用程序加载</title>
-        <link>https://wangmingyou.github.io/p/ios-app-launch/</link>
+        <link>https://wangmingyou.github.io/ios-app-launch/</link>
         <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
         
-        <guid>https://wangmingyou.github.io/p/ios-app-launch/</guid>
+        <guid>https://wangmingyou.github.io/ios-app-launch/</guid>
         <description>&lt;h1 id=&#34;ios应用程序加载&#34;&gt;iOS应用程序加载&lt;/h1&gt;
 &lt;h2 id=&#34;前言&#34;&gt;前言&lt;/h2&gt;
 &lt;p&gt;这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。&lt;/p&gt;
 &lt;h2 id=&#34;基础概念&#34;&gt;基础概念&lt;/h2&gt;
 &lt;h3 id=&#34;冷启动&#34;&gt;冷启动&lt;/h3&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/1.png&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/1.png&#34;
 	width=&#34;2418&#34;
 	height=&#34;472&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/1_hu92fafcac3c6ae833f41ecd2f3be33f6b_115318_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;冷启动&#34;
@@ -42,10 +42,10 @@
 &lt;li&gt;T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h3 id=&#34;热启动&#34;&gt;热启动&lt;/h3&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/2.png&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/2.png&#34;
 	width=&#34;1926&#34;
 	height=&#34;224&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/2_hucaca5c4dc98265c0f485d22c21d03661_58729_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;热启动&#34;
@@ -90,10 +90,10 @@ applicationDidBecomeActive
 &lt;/div&gt;
 &lt;/div&gt;&lt;h2 id=&#34;简单理解编译过程&#34;&gt;简单理解编译过程&lt;/h2&gt;
 &lt;p&gt;应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/3.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/3.png&#34;
 	width=&#34;1140&#34;
 	height=&#34;894&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/3_hu67d4812b847fdce77853d4cb4e5a5013_76781_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;编译过程&#34;
@@ -107,10 +107,10 @@ applicationDidBecomeActive
 &lt;h3 id=&#34;静态库&#34;&gt;静态库&lt;/h3&gt;
 &lt;p&gt;比如： .a, .lib
 在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/4.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/4.png&#34;
 	width=&#34;978&#34;
 	height=&#34;364&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/4_hu1c2d4a19039aae8429bd70c683f742a5_26183_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;静态库&#34;
@@ -124,10 +124,10 @@ applicationDidBecomeActive
 &lt;h3 id=&#34;动态库&#34;&gt;动态库&lt;/h3&gt;
 &lt;p&gt;比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc
 动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/5.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/5.png&#34;
 	width=&#34;1144&#34;
 	height=&#34;570&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/5_hua8c381f0defb05b80157695819fc4b1b_48348_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;动态库&#34;
@@ -142,10 +142,10 @@ applicationDidBecomeActive
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start:
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/6.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/6.png&#34;
 	width=&#34;1280&#34;
 	height=&#34;800&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/6_hu280aaf2196919c2e86fe04b216ba84b7_436805_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;main断点&#34;
@@ -159,10 +159,10 @@ applicationDidBecomeActive
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;根据已有常识，还有一个特殊方法 + load（或+ (void)initialize）方法，在此断点
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/7.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/7.png&#34;
 	width=&#34;1280&#34;
 	height=&#34;800&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/7_hu280aaf2196919c2e86fe04b216ba84b7_517556_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;load断点&#34;
@@ -192,10 +192,10 @@ applicationDidBecomeActive
 &lt;/ol&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;搜索__dyld_start,只看arm64下的
-&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/8.png&#34;
+&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/8.png&#34;
 	width=&#34;3072&#34;
 	height=&#34;1920&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/8_hub2c0b415f802ff7e14d3d745e8f94a46_1136033_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;dyld_start汇编入口&#34;
@@ -222,10 +222,10 @@ applicationDidBecomeActive
 &lt;/div&gt;&lt;blockquote&gt;
 &lt;p&gt;搜索 &lt;code&gt;dyldbootstrap::star&lt;/code&gt;，&lt;code&gt;::start&lt;/code&gt; 未果，猜测C方法，搜索&lt;code&gt;start(&lt;/code&gt; ，确定&lt;code&gt;dyld - star&lt;/code&gt; 最终入口函数。&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/9.png&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/9.png&#34;
 	width=&#34;3072&#34;
 	height=&#34;1920&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/9_hub2c0b415f802ff7e14d3d745e8f94a46_1000667_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;dyld_star最终入口函数&#34;
@@ -1005,10 +1005,10 @@ void _dyld_objc_notify_register(_dyld_objc_notify_mapped    mapped,
 &lt;blockquote&gt;
 &lt;p&gt;简单的思路就是在github上把源码down下来，然后直接build，那种找不到符号的报错直接先注释，找不到文件的去apple的open source搜索下，如果找到了，就添加到自己的工程下面。基本这样操作完了，就没error了，然后新建一个target, 将objc库添加到target的Dependencies 里面。如下图所示。&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/10.jpg&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/10.jpg&#34;
 	width=&#34;1500&#34;
 	height=&#34;938&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_1024x0_resize_q75_box.jpg 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/ios-app-launch/assets/10_hu15c7c349cd219dc700813f6d454ddd97_192988_1024x0_resize_q75_box.jpg 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;libobjc源码&#34;
@@ -1020,10 +1020,10 @@ void _dyld_objc_notify_register(_dyld_objc_notify_mapped    mapped,
 	
 &gt;&lt;/p&gt;
 &lt;p&gt;为了明确&lt;code&gt;_objc_init&lt;/code&gt;的调用时机，简单的思路就是在&lt;code&gt;_objc_init&lt;/code&gt;里面加一个断点，看堆栈。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/11.jpg&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/11.jpg&#34;
 	width=&#34;1500&#34;
 	height=&#34;938&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_1024x0_resize_q75_box.jpg 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/ios-app-launch/assets/11_hu15c7c349cd219dc700813f6d454ddd97_406892_1024x0_resize_q75_box.jpg 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;_objc_init堆栈&#34;
@@ -1104,10 +1104,10 @@ libdispatch_init-&amp;gt; _os_object_init-&amp;gt; _objc_init
 到这里，通过源码也验证了 上述堆栈的流程。&lt;/p&gt;
 &lt;h2 id=&#34;启动完整流程&#34;&gt;启动完整流程&lt;/h2&gt;
 &lt;h3 id=&#34;简化流程图&#34;&gt;简化流程图&lt;/h3&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/12.jpg&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/12.jpg&#34;
 	width=&#34;1722&#34;
 	height=&#34;924&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_1024x0_resize_q75_box.jpg 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/ios-app-launch/assets/12_hu15c7c349cd219dc700813f6d454ddd97_132632_1024x0_resize_q75_box.jpg 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;简化流程图&#34;
@@ -1119,10 +1119,10 @@ libdispatch_init-&amp;gt; _os_object_init-&amp;gt; _objc_init
 	
 &gt;&lt;/p&gt;
 &lt;h3 id=&#34;详细流程图&#34;&gt;详细流程图&lt;/h3&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/13.png&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/13.png&#34;
 	width=&#34;2736&#34;
 	height=&#34;1654&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_1024x0_resize_box_3.png 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_480x0_resize_box_3.png 480w, https://wangmingyou.github.io/ios-app-launch/assets/13_hu7d64730783b5ce8da429aff9cb4efd2b_420926_1024x0_resize_box_3.png 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;详细流程图&#34;
@@ -1136,10 +1136,10 @@ libdispatch_init-&amp;gt; _os_object_init-&amp;gt; _objc_init
 &lt;h2 id=&#34;实际应用&#34;&gt;实际应用&lt;/h2&gt;
 &lt;h3 id=&#34;main之前---调试--监测&#34;&gt;main之前 - 调试 &amp;amp; 监测&lt;/h3&gt;
 &lt;h4 id=&#34;1-xcode打印pre-main的时间开发环境xcode-dyld_print_statics--1&#34;&gt;1. Xcode打印pre-main的时间：开发环境Xcode DYLD_PRINT_STATICS = 1&lt;/h4&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/14.jpg&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/14.jpg&#34;
 	width=&#34;509&#34;
 	height=&#34;138&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_1024x0_resize_q75_box.jpg 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/ios-app-launch/assets/14_hu15c7c349cd219dc700813f6d454ddd97_42452_1024x0_resize_q75_box.jpg 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;实际应用1&#34;
@@ -1161,10 +1161,10 @@ libdispatch_init-&amp;gt; _os_object_init-&amp;gt; _objc_init
 &lt;h4 id=&#34;2-instrument---systemtrace--timeprofiler&#34;&gt;2. Instrument - SystemTrace / TimeProfiler&lt;/h4&gt;
 &lt;p&gt;会记录启动的一些信息&lt;/p&gt;
 &lt;h4 id=&#34;3-xcode配置linkmap拿到linkmap文件分析&#34;&gt;3. Xcode配置LinkMap，拿到LinkMap文件，分析&lt;/h4&gt;
-&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/15.jpg&#34;
+&lt;p&gt;&lt;img src=&#34;https://wangmingyou.github.io/ios-app-launch/assets/15.jpg&#34;
 	width=&#34;526&#34;
 	height=&#34;215&#34;
-	srcset=&#34;https://wangmingyou.github.io/p/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/p/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_1024x0_resize_q75_box.jpg 1024w&#34;
+	srcset=&#34;https://wangmingyou.github.io/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_480x0_resize_q75_box.jpg 480w, https://wangmingyou.github.io/ios-app-launch/assets/15_hu15c7c349cd219dc700813f6d454ddd97_25305_1024x0_resize_q75_box.jpg 1024w&#34;
 	loading=&#34;lazy&#34;
 	
 		alt=&#34;实际应用2&#34;
