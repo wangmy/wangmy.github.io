@@ -6,7 +6,57 @@
         <description>Recent content in Posts on YoyoWong</description>
         <generator>Hugo -- gohugo.io</generator>
         <language>en</language>
-        <lastBuildDate>Fri, 18 Feb 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/post/index.xml" rel="self" type="application/rss+xml" /><item>
+        <lastBuildDate>Tue, 24 May 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/post/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Constructive criticism</title>
+        <link>https://wangmingyou.github.io/p/constructive-criticism/</link>
+        <pubDate>Tue, 24 May 2022 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/constructive-criticism/</guid>
+        <description>&lt;h1 id=&#34;constructive-criticism&#34;&gt;Constructive criticism&lt;/h1&gt;
+&lt;h2 id=&#34;behaviors-that-would-cause-problems-in-an-interview&#34;&gt;Behaviors that would cause problems in an interview&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;unsuitable wearing
+being nervous
+unprepared / prepared unenoughly&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;use-polite-phrases-to-give-constructive-criticism&#34;&gt;Use polite phrases to give constructive criticism.&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;You may want to look into ways of&amp;hellip;
+I think that it would benefit you if&amp;hellip;
+One thing to work on in particular is&amp;hellip;
+Perhaps you could have&amp;hellip;
+Bear in mind that&amp;hellip;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;give-suggestions-to-help-our-colleagues-improve-their-interviewing-skills&#34;&gt;Give suggestions to help our colleagues improve their interviewing skills&lt;/h2&gt;
+&lt;h2 id=&#34;who-do-you-give-constructive-criticism-to&#34;&gt;Who do you give constructive criticism to?&lt;/h2&gt;
+&lt;h2 id=&#34;what-was-the-most-unconstructive-criticism-you-have-ever-received-how-could-it-have-been-more-constructive&#34;&gt;What was the most unconstructive criticism you have ever received? How could it have been more constructive?&lt;/h2&gt;
+&lt;h2 id=&#34;practice&#34;&gt;Practice&lt;/h2&gt;
+&lt;p&gt;&lt;em&gt;&lt;strong&gt;Aiden had a very unsuccessful interview yesterday. The interviewer wrote hime an email afterword. How does he give constructive criticism?&lt;/strong&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I notice that you seemed very nervous during the interview and that you stuttered a lot during the interview. I think &lt;em&gt;&lt;strong&gt;you may want to look into ways of&lt;/strong&gt;&lt;/em&gt; overcoming your nerves. The personal assistant position can be quite stressful, but you need to be able to &lt;em&gt;&lt;strong&gt;communicate effectively&lt;/strong&gt;&lt;/em&gt; at all times.&lt;/p&gt;
+&lt;p&gt;As you are applying for a position that requires you to use the computer for long periods of time, I think that &lt;em&gt;&lt;strong&gt;it would benefit you if&lt;/strong&gt;&lt;/em&gt; you improved your IT skills. &lt;em&gt;&lt;strong&gt;One thing to work on in particular is&lt;/strong&gt;&lt;/em&gt; your knowledge of word-processing programs.&lt;/p&gt;
+&lt;p&gt;Also, &lt;em&gt;&lt;strong&gt;perhaps you could have&lt;/strong&gt;&lt;/em&gt; toned down your clothing style a little. Stick to Waring dark colors rather than bright white. &lt;em&gt;&lt;strong&gt;Bear in mind that&lt;/strong&gt;&lt;/em&gt; dark colors will make you appear more professional.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;others&#34;&gt;Others&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;make a mistake
+&amp;hellip; not related to the question
+compensation = salary
+We have a colleague who is very shy. She is afraid of speaking in front of everyone.
+wear a suit and tie
+stained my suit with coffee
+speak polietly
+embarrassed
+I need encouragement
+make the decision
+take some courses to improve communication.
+I would like to tell myself&amp;hellip;.
+screw it up 搞砸了
+rehearsal 彩排&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        <item>
         <title>源码学习</title>
         <link>https://wangmingyou.github.io/p/open_source/</link>
         <pubDate>Fri, 18 Feb 2022 00:00:00 +0000</pubDate>
@@ -413,6 +463,115 @@ NSLog(@&amp;#34;%@&amp;#34;,NSStringFromClass(objc_msgSendSuper2(&amp;amp;test_s
 &lt;blockquote&gt;
 &lt;p&gt;[self class] 就是发送消息objc_msgSend，消息接受者是 self ⽅法编号：class
 [super class] 本质就是objc_msgSendSuper, 消息的接受者还是 self ⽅法编号：class 逻辑教育 只是objc_msgSendSuper 会更快 直接跳过 self 的查找&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        <item>
+        <title></title>
+        <link>https://wangmingyou.github.io/p/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/</guid>
+        <description>&lt;h1 id=&#34;数组链表跳表&#34;&gt;数组、链表、跳表&lt;/h1&gt;
+&lt;h2 id=&#34;基本实现和特性&#34;&gt;基本实现和特性&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;LinkedList
+访问慢，插入、删除快&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Array
+访问快， 插入、删除慢&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;跳表
+为了优化，补足链表的缺陷，中心思想：升维（空间换时间），增加索引（一级、二级、&amp;hellip;）
+增加、删除节点需要更新索引，维护成本高&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://developer.classpath.org/doc/java/util/ArrayList-source.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;Java 源码分析（ArrayList）&lt;/a&gt;
+&lt;a class=&#34;link&#34; href=&#34;https://www.geeksforgeeks.org/implementing-a-linked-list-in-java-using-class/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;Linked List 的标准实现代码&lt;/a&gt;
+&lt;a class=&#34;link&#34; href=&#34;https://developer.classpath.org/doc/java/util/LinkedList-source.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;Java 源码分析（LinkedList）&lt;/a&gt;
+&lt;a class=&#34;link&#34; href=&#34;https://redisbook.readthedocs.io/en/latest/internal-datastruct/skiplist.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;跳跃表&lt;/a&gt;
+&lt;a class=&#34;link&#34; href=&#34;https://www.zhihu.com/question/20202931&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;为啥 redis 使用跳表(skiplist)而不是使用 red-black？&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;leetcode-练习题&#34;&gt;leetcode 练习题&lt;/h2&gt;
+&lt;p&gt;&lt;a class=&#34;link&#34; href=&#34;https://leetcode-cn.com/problems/move-zeroes/solution/yi-dong-ling-by-leetcode-solution/&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;移动零&lt;/a&gt;&lt;/p&gt;
+</description>
+        </item>
+        <item>
+        <title></title>
+        <link>https://wangmingyou.github.io/p/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/</guid>
+        <description>&lt;h1 id=&#34;ecma&#34;&gt;ECMA&lt;/h1&gt;
+&lt;h1 id=&#34;tc39&#34;&gt;TC39&lt;/h1&gt;
+&lt;h1 id=&#34;typescript&#34;&gt;TypeScript&lt;/h1&gt;
+&lt;h2 id=&#34;环境搭建&#34;&gt;环境搭建&lt;/h2&gt;
+&lt;h1 id=&#34;响应式设计&#34;&gt;响应式设计&lt;/h1&gt;
+&lt;h2 id=&#34;传统网站如何适应各个设备&#34;&gt;传统网站如何适应各个设备&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;子域名
+2010年5月  alistapart 发布 responseive-web-design
+liquid flexible fluid elastic&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;屏幕分辨率概念&#34;&gt;屏幕分辨率概念&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Media Query: MQtest.io 查询浏览器支持MediaQuery
+bootcss.com&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;响应式设计需要考虑哪些&#34;&gt;响应式设计需要考虑哪些&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;布局：网格布局&lt;/li&gt;
+&lt;li&gt;响应式图片：自动剪裁/图片标准（大中小图）/插件/服务端控制&lt;/li&gt;
+&lt;li&gt;响应式字体（字体排印学）&lt;/li&gt;
+&lt;li&gt;响应式导航，导航条适配&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;设计步骤&#34;&gt;设计步骤&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;渐进增强，小屏幕优先
+切分断点
+Bootstrap&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        <item>
+        <title></title>
+        <link>https://wangmingyou.github.io/p/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/</guid>
+        <description>&lt;h1 id=&#34;synchronized&#34;&gt;synchronized&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;递归锁
+nil 不做任何处理&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+        </item>
+        <item>
+        <title></title>
+        <link>https://wangmingyou.github.io/p/</link>
+        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        
+        <guid>https://wangmingyou.github.io/p/</guid>
+        <description>&lt;h1 id=&#34;锁&#34;&gt;锁&lt;/h1&gt;
+&lt;h2 id=&#34;锁总共有几种&#34;&gt;锁总共有几种&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;sync
+struct _SYNC_EXIT {
+_SYNC_EXIT(id arg) : sync_exit(arg) {}
+~_SYNC_EXIT() {
+objc_sync_exit(sync_exit);
+}
+id sync_exit;
+}
+_sync_exit(_sync_obj)&lt;/p&gt;
 &lt;/blockquote&gt;
 </description>
         </item>
