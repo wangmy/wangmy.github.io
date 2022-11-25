@@ -1,35 +1,10 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-    <channel>
-        <title>Categories on YoyoWong</title>
-        <link>https://wangmingyou.github.io/categories/</link>
-        <description>Recent content in Categories on YoyoWong</description>
-        <generator>Hugo -- gohugo.io</generator>
-        <language>en</language>
-        <lastBuildDate>Tue, 24 May 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://wangmingyou.github.io/categories/index.xml" rel="self" type="application/rss+xml" /><item>
-        <title>EnglishStudy</title>
-        <link>https://wangmingyou.github.io/categories/englishstudy/</link>
-        <pubDate>Tue, 24 May 2022 00:00:00 +0000</pubDate>
-        
-        <guid>https://wangmingyou.github.io/categories/englishstudy/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>iOS</title>
-        <link>https://wangmingyou.github.io/categories/ios/</link>
-        <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
-        
-        <guid>https://wangmingyou.github.io/categories/ios/</guid>
-        <description></description>
-        </item>
-        <item>
-        <title>Util</title>
-        <link>https://wangmingyou.github.io/categories/util/</link>
-        <pubDate>Sat, 15 Jan 2022 00:00:00 +0000</pubDate>
-        
-        <guid>https://wangmingyou.github.io/categories/util/</guid>
-        <description></description>
-        </item>
-        
-    </channel>
+  <channel>
+    <title>Categories on YoyoWong&#39;s blog</title>
+    <link>/categories/</link>
+    <description>Recent content in Categories on YoyoWong&#39;s blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language><atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
+  </channel>
 </rss>
