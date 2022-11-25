@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='前言 这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。
+基础概念 冷启动 注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。
+通常说的启动，也是指的冷启动；启动优化大部分也是做冷启动部分的性能优化 暂且可以把冷启动分为几个阶段：
+T1: main之前，加载App可执行文件到内存，然后执行一系列的加载&amp;amp;链接等工作，最后执行到main()函数 T2: main之后，didFinishLaunching之前，这部分开发是可以监听到的 T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的 热启动 热启动的阶段和状态都是可监听的，不做过多介绍。
+应用程序的状态 1 2 3 4 5 6 7 8 9 10 11 12 启动程序 willFinishLaunchingWithOptions didFinishLaunchingWithOptions applicationDidBecomeActive 按下home键 applicationWillResignActive applicationDidEnterBackground 双击home键，再打开程序 applicationWillEnterForeground applicationDidBecomeActive 简单理解编译过程 应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。 静态库 比如： .a, .lib 在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。 动态库 比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc 动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。 定位核心源码入口 main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start: 在特殊方法 &#43; load（或&#43; (void)initialize）方法，在此断点 初探结论： _dyld_start -&amp;gt; &#43;load -&amp;gt; main -&amp;gt; &#43;initialize'>
+<title>iOS应用程序加载</title>
+
+<link rel='canonical' href='/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/'>
+
+<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content='iOS应用程序加载'>
+<meta property='og:description' content='前言 这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。
+基础概念 冷启动 注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。
+通常说的启动，也是指的冷启动；启动优化大部分也是做冷启动部分的性能优化 暂且可以把冷启动分为几个阶段：
+T1: main之前，加载App可执行文件到内存，然后执行一系列的加载&amp;amp;链接等工作，最后执行到main()函数 T2: main之后，didFinishLaunching之前，这部分开发是可以监听到的 T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的 热启动 热启动的阶段和状态都是可监听的，不做过多介绍。
+应用程序的状态 1 2 3 4 5 6 7 8 9 10 11 12 启动程序 willFinishLaunchingWithOptions didFinishLaunchingWithOptions applicationDidBecomeActive 按下home键 applicationWillResignActive applicationDidEnterBackground 双击home键，再打开程序 applicationWillEnterForeground applicationDidBecomeActive 简单理解编译过程 应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。 静态库 比如： .a, .lib 在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。 动态库 比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc 动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。 定位核心源码入口 main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start: 在特殊方法 &#43; load（或&#43; (void)initialize）方法，在此断点 初探结论： _dyld_start -&amp;gt; &#43;load -&amp;gt; main -&amp;gt; &#43;initialize'>
+<meta property='og:url' content='/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/'>
+<meta property='og:site_name' content='YoyoWong'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2022-03-25T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2022-03-25T00:00:00&#43;00:00'/><meta property='og:image' content='/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933.jpg' />
+<meta name="twitter:title" content="iOS应用程序加载">
+<meta name="twitter:description" content="前言 这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。
+基础概念 冷启动 注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。
+通常说的启动，也是指的冷启动；启动优化大部分也是做冷启动部分的性能优化 暂且可以把冷启动分为几个阶段：
+T1: main之前，加载App可执行文件到内存，然后执行一系列的加载&amp;amp;链接等工作，最后执行到main()函数 T2: main之后，didFinishLaunching之前，这部分开发是可以监听到的 T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的 热启动 热启动的阶段和状态都是可监听的，不做过多介绍。
+应用程序的状态 1 2 3 4 5 6 7 8 9 10 11 12 启动程序 willFinishLaunchingWithOptions didFinishLaunchingWithOptions applicationDidBecomeActive 按下home键 applicationWillResignActive applicationDidEnterBackground 双击home键，再打开程序 applicationWillEnterForeground applicationDidBecomeActive 简单理解编译过程 应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。 静态库 比如： .a, .lib 在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。 动态库 比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc 动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。 定位核心源码入口 main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start: 在特殊方法 &#43; load（或&#43; (void)initialize）方法，在此断点 初探结论： _dyld_start -&amp;gt; &#43;load -&amp;gt; main -&amp;gt; &#43;initialize"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933.jpg' />
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu8ad42cd0bb16d295ddead16cde881b2f_58443_300x0_resize_box_3.png" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🌻</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">YoyoWong</a></h1>
+            <h2 class="site-description">Welcome 👏👏👏.</h2>
+        </div>
+    </header><ol class="social-menu">
+            
+                <li>
+                    <a 
+                        href='https://github.com/wangmy'
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E5%85%B3%E4%BA%8E/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/%E9%93%BE%E6%8E%A5/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
+  <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
+</svg>
+
+
+
+                
+                <span>链接</span>
+            </a>
+        </li>
+        
+
+        <div class="menu-bottom-section">
+            
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>暗色模式</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#前言">前言</a></li>
+    <li><a href="#基础概念">基础概念</a>
+      <ol>
+        <li><a href="#冷启动">冷启动</a></li>
+        <li><a href="#热启动">热启动</a></li>
+        <li><a href="#应用程序的状态">应用程序的状态</a></li>
+      </ol>
+    </li>
+    <li><a href="#简单理解编译过程">简单理解编译过程</a>
+      <ol>
+        <li><a href="#静态库">静态库</a></li>
+        <li><a href="#动态库">动态库</a></li>
+      </ol>
+    </li>
+    <li><a href="#定位核心源码入口">定位核心源码入口</a>
+      <ol>
+        <li><a href="#初探结论">初探结论：</a></li>
+        <li><a href="#__dyld_start">__dyld_start</a></li>
+        <li><a href="#入口函数-uintptr_t-start">入口函数 uintptr_t start(…)</a></li>
+        <li><a href="#核心函数-dyld_main">核心函数 dyld::_main</a></li>
+      </ol>
+    </li>
+    <li><a href="#dyld核心源码流程">dyld核心源码流程</a>
+      <ol>
+        <li><a href="#reloadallimages">reloadAllImages</a>
+          <ol>
+            <li><a href="#实例化主程序">实例化主程序</a></li>
+            <li><a href="#加载任何插入动态库">加载任何插入动态库</a></li>
+            <li><a href="#链接库">链接库</a></li>
+          </ol>
+        </li>
+        <li><a href="#运行所有初始化程序---run-all-initializers">运行所有初始化程序 - run all initializers</a>
+          <ol>
+            <li><a href="#runinitializers">runInitializers</a></li>
+          </ol>
+        </li>
+        <li><a href="#回调监听">回调监听</a>
+          <ol>
+            <li><a href="#可以猜测流程">可以猜测流程</a></li>
+            <li><a href="#提出疑问">提出疑问</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#libobjc-启动核心源码分析">libobjc 启动核心源码分析</a>
+      <ol>
+        <li><a href="#找到-_dyld_objc_notify_register-入口">找到 _dyld_objc_notify_register 入口</a></li>
+        <li><a href="#build--run-libobjc">build &amp; run libobjc</a></li>
+        <li><a href="#确认基础流程">确认基础流程</a></li>
+      </ol>
+    </li>
+    <li><a href="#验证流程---配合libsytem源码libdispatch源码">验证流程 - 配合libSytem源码，libdispatch源码</a>
+      <ol>
+        <li><a href="#dyld-初始化必须确保先完成-libsystem-初始化">dyld 初始化必须确保先完成 libSystem 初始化</a></li>
+        <li><a href="#libsytem-initializer">libSytem initializer</a></li>
+        <li><a href="#libdispatch_init">libdispatch_init</a></li>
+      </ol>
+    </li>
+    <li><a href="#启动完整流程">启动完整流程</a>
+      <ol>
+        <li><a href="#简化流程图">简化流程图</a></li>
+        <li><a href="#详细流程图">详细流程图</a></li>
+      </ol>
+    </li>
+    <li><a href="#实际应用">实际应用</a>
+      <ol>
+        <li><a href="#main之前---调试--监测">main之前 - 调试 &amp; 监测</a>
+          <ol>
+            <li><a href="#xcode打印pre-main的时间开发环境xcode-dyld_print_statics--1">Xcode打印pre-main的时间：开发环境Xcode DYLD_PRINT_STATICS = 1</a></li>
+            <li><a href="#instrument---systemtrace--timeprofiler">Instrument - SystemTrace / TimeProfiler</a></li>
+            <li><a href="#xcode配置linkmap拿到linkmap文件分析">Xcode配置LinkMap，拿到LinkMap文件，分析</a></li>
+            <li><a href="#其他12不推荐开拓思路">其他（1，2不推荐，开拓思路）</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+    <li><a href="#objc源码下载">objc源码下载</a>
+      <ol>
+        <li><a href="#objc818">objc818</a></li>
+        <li><a href="#objc838">objc838</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/">
+                <img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_800x0_resize_q75_box.jpg"
+                        srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_800x0_resize_q75_box.jpg 800w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_1600x0_resize_q75_box.jpg 1600w"
+                        width="800" 
+                        height="484" 
+                        loading="lazy"
+                        alt="Featured image of post iOS应用程序加载" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/ios/" >
+                iOS
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/">iOS应用程序加载</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Mar 25, 2022</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 9 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h2 id="前言">前言</h2>
+<p>这篇文章的核心目的是跟着苹果源码，深度学习并理解iOS APP启动过程。</p>
+<h2 id="基础概念">基础概念</h2>
+<h3 id="冷启动">冷启动</h3>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693698465346.jpg"
+	width="1024"
+	height="200"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693698465346_hu463b78f3e15bdc2f729806aee7c07ab4_47087_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693698465346_hu463b78f3e15bdc2f729806aee7c07ab4_47087_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="512"
+		data-flex-basis="1228px"
+	
+></p>
+<blockquote>
+<p>注意：在日常开发或测试的时候为了，触发冷启动状态，会手动kill app，然后点击启动。这种情况下的冷启动可能会与上述冷启动过程的步骤稍微少些，可以配合Instrument调试验证（这个在文章结尾会做介绍）。因此通常如果要模拟更真实全面的冷启动，在kill app后，再打开/并稍微使用几个其他app。</p>
+</blockquote>
+<p>通常说的启动，也是指的冷启动；启动优化大部分也是做冷启动部分的性能优化 暂且可以把冷启动分为几个阶段：</p>
+<ul>
+<li>T1: main之前，加载App可执行文件到内存，然后执行一系列的加载&amp;链接等工作，最后执行到main()函数</li>
+<li>T2: main之后，didFinishLaunching之前，这部分开发是可以监听到的</li>
+<li>T3: didFinishLaunching之后，启动页面出现之前，也是可以监听的</li>
+</ul>
+<h3 id="热启动">热启动</h3>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693701475567.jpg"
+	width="1024"
+	height="119"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693701475567_hu3fc81ab65c962d5cb0f5c57ffb0fd083_36024_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693701475567_hu3fc81ab65c962d5cb0f5c57ffb0fd083_36024_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="860"
+		data-flex-basis="2065px"
+	
+>
+热启动的阶段和状态都是可监听的，不做过多介绍。</p>
+<h3 id="应用程序的状态">应用程序的状态</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">启动程序
+</span></span><span class="line"><span class="cl">willFinishLaunchingWithOptions
+</span></span><span class="line"><span class="cl">didFinishLaunchingWithOptions
+</span></span><span class="line"><span class="cl">applicationDidBecomeActive
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">按下home键
+</span></span><span class="line"><span class="cl">applicationWillResignActive
+</span></span><span class="line"><span class="cl">applicationDidEnterBackground
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">双击home键，再打开程序
+</span></span><span class="line"><span class="cl">applicationWillEnterForeground
+</span></span><span class="line"><span class="cl">applicationDidBecomeActive
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="简单理解编译过程">简单理解编译过程</h2>
+<p>应用程序加载过程中会依赖很多底层库，这些底层库其实就是可执行的代码的二进制，被操作系统写入到内存。
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703300492.jpg"
+	width="1024"
+	height="803"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703300492_hu5ad98b908d977cd3447717802411769e_67283_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703300492_hu5ad98b908d977cd3447717802411769e_67283_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="127"
+		data-flex-basis="306px"
+	
+></p>
+<h3 id="静态库">静态库</h3>
+<p>比如： .a, .lib 在链接阶段，会将汇编生成的目标与引用的库一起链接打包到可执行文件中。
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703926730.jpg"
+	width="1024"
+	height="381"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703926730_hu4d5db889d6f348c29503610f781360a7_35346_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693703926730_hu4d5db889d6f348c29503610f781360a7_35346_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="268"
+		data-flex-basis="645px"
+	
+></p>
+<h3 id="动态库">动态库</h3>
+<p>比如： framework，.so, .dll，UIKIT.framework， libsystem， libdispatch，libobjc 动态库根据需要编译，动态加载，在运行时才被载入，节约资源，减小体积。
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693704431403.jpg"
+	width="1024"
+	height="510"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693704431403_hu8283e8d13025e6a6413f82e079f47b7d_40440_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693704431403_hu8283e8d13025e6a6413f82e079f47b7d_40440_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="200"
+		data-flex-basis="481px"
+	
+></p>
+<h2 id="定位核心源码入口">定位核心源码入口</h2>
+<ol>
+<li>
+<p>main函数，断点堆栈（Debug/Debug Workflow/Always Show Disassembly 开启汇编Debug）可以看到是最早是：dyld的start:
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693705094212.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693705094212_hu440f4c49d49347e7b2265f13335d05fa_91966_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693705094212_hu440f4c49d49347e7b2265f13335d05fa_91966_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+></p>
+</li>
+<li>
+<p>在特殊方法 + load（或+ (void)initialize）方法，在此断点
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693708417366.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693708417366_hu440f4c49d49347e7b2265f13335d05fa_122444_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693708417366_hu440f4c49d49347e7b2265f13335d05fa_122444_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+></p>
+</li>
+</ol>
+<h3 id="初探结论">初探结论：</h3>
+<p>_dyld_start -&gt; +load -&gt; main -&gt; +initialize</p>
+<blockquote>
+<p>源码学习小Tips</p>
+<ol>
+<li>OC 底层是 C/C++/汇编 所以源码常见搜索技巧：XXXX(或者删除) XXXX:: ::XXXX XXXX(</li>
+<li>主逻辑很可能在 if else 判断 ； while / do-while； for 里面</li>
+<li>通过返回值 - 定位核心逻辑 （尤其汇编，重点关注bl）</li>
+<li>看官方源码，多关注有注释的地方；</li>
+<li>抓主干，跳过类似 check / if-return逻辑；跳过预编译非主架构逻辑（ios架构：arm64）</li>
+</ol>
+</blockquote>
+<h3 id="__dyld_start">__dyld_start</h3>
+<p>接下来就跟着dyld源码 初步搜索 _dyld_start
+搜索__dyld_start,只看arm64下的
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710054906.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710054906_hu0cd249f03c5bd502fd99007d852ffcf7_175632_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710054906_hu0cd249f03c5bd502fd99007d852ffcf7_175632_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+>
+看不懂汇编没关系，看后面的注释，大概能明白其含义，直到出现bl跳转，再结合其注释，基本定位到核心代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// call dyldbootstrap::start(app_mh, argc, argv, slide, dyld_mh, &amp;startGlue)
+</span></span><span class="line"><span class="cl">	bl	__ZN13dyldbootstrap5startEPK12macho_headeriPPKclS2_Pm
+</span></span><span class="line"><span class="cl">	mov	x16,x0                  // save entry point address in x16
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>搜索 dyldbootstrap::star，::start 未果，猜测C方法，搜索start( ，确定dyld - star 最终入口函数。
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710685212.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710685212_huf5b6d3156f9b6fbda99e7ba95c31a878_156680_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693710685212_huf5b6d3156f9b6fbda99e7ba95c31a878_156680_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+>
+这样首先可以确认最终入口方法uintptr_t start(&hellip;)</p>
+<h3 id="入口函数-uintptr_t-start">入口函数 uintptr_t start(…)</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">intptr_t start(const struct macho_header* appsMachHeader, int argc, const char* argv[], 
+</span></span><span class="line"><span class="cl">				intptr_t slide, const struct macho_header* dyldsMachHeader,
+</span></span><span class="line"><span class="cl">				uintptr_t* startGlue)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">			// rebaseDyldIfNeeded
+</span></span><span class="line"><span class="cl">    	// mach_init
+</span></span><span class="line"><span class="cl">    	// apple_guard_setup
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    	return dyld::_main(appsMachHeader, appsSlide, argc, argv, envp, apple, startGlue);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="核心函数-dyld_main">核心函数 dyld::_main</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">uintptr_t _main(const macho_header* mainExecutableMH, uintptr_t mainExecutableSlide,
+</span></span><span class="line"><span class="cl">                int argc, const char* argv[], const char* envp[], const char* apple[], 
+</span></span><span class="line"><span class="cl">                uintptr_t* startGlue) {
+</span></span><span class="line"><span class="cl">    // settupEnv 环境变量的相关处理
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">        checkEnvironmentVariables(envp);
+</span></span><span class="line"><span class="cl">		defaultUninitializedFallbackPaths(envp);
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">    // load shared cache（共享缓存处理）
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">        // load shared cache
+</span></span><span class="line"><span class="cl">        checkSharedRegionDisable(...);
+</span></span><span class="line"><span class="cl">        mapSharedCache();
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">            
+</span></span><span class="line"><span class="cl">    // 将dyld加到UUID列表
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">        // add dyld itself to UUID list
+</span></span><span class="line"><span class="cl">		addDyldImageToUUIDList();
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">    // ...
+</span></span><span class="line"><span class="cl">    [1]reloadAllImages:
+</span></span><span class="line"><span class="cl">        [1.1]mainExecutable ... (实例化主程序)
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    // [1.2]load any inserted libraries (加载任何插入动态库)
+</span></span><span class="line"><span class="cl">    if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
+</span></span><span class="line"><span class="cl">        for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
+</span></span><span class="line"><span class="cl">            loadInsertedDylib(*lib);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">        
+</span></span><span class="line"><span class="cl">    // [1.3.1]link main executable (链接库)
+</span></span><span class="line"><span class="cl">    link(sMainExecutable, sEnv.DYLD_BIND_AT_LAUNCH, true, ImageLoader::RPathChain(NULL, NULL), -1);
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    // [1.3.2]link any inserted libraries
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    // [2]run all initializers (运行所有初始化程序)
+</span></span><span class="line"><span class="cl">	initializeMainExecutable();
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    // [3]notify any montoring proccesses that this process is about to enter main()
+</span></span><span class="line"><span class="cl">    (通知监听dyld-main)
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    notifyMonitoringDyldMain();
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="dyld核心源码流程">dyld核心源码流程</h2>
+<h3 id="reloadallimages">reloadAllImages</h3>
+<h4 id="实例化主程序">实例化主程序</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">static ImageLoaderMachO* instantiateFromLoadedImage(const macho_header* mh, uintptr_t slide, const char* path)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	// try mach-o loader
+</span></span><span class="line"><span class="cl">	if ( isCompatibleMachO((const uint8_t*)mh, path) ) {
+</span></span><span class="line"><span class="cl">		ImageLoader* image = ImageLoaderMachO::instantiateMainExecutable(mh, slide, path, gLinkContext);
+</span></span><span class="line"><span class="cl">		addImage(image);
+</span></span><span class="line"><span class="cl">		return (ImageLoaderMachO*)image;
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// create image for main executable
+</span></span><span class="line"><span class="cl">ImageLoader* ImageLoaderMachO::instantiateMainExecutable(const macho_header* mh, uintptr_t slide, const char* path, const LinkContext&amp; context)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">   ....
+</span></span><span class="line"><span class="cl">	bool compressed;
+</span></span><span class="line"><span class="cl">	unsigned int segCount; // 段的数量
+</span></span><span class="line"><span class="cl">	unsigned int libCount; // lib库的数量
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">	sniffLoadCommands(mh, path, false, &amp;compressed, &amp;segCount, &amp;libCount, context, &amp;codeSigCmd, &amp;encryptCmd);
+</span></span><span class="line"><span class="cl">	// instantiate concrete class based on content of load commands
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li><code>instantiateFromLoadedImage</code> -&gt;<code>instantiateMainExecutable</code> -&gt;<code>sniffLoadCommands</code></li>
+<li><code>addImage</code></li>
+</ol>
+<h4 id="加载任何插入动态库">加载任何插入动态库</h4>
+<p>在uintptr_t _main(…) 函数有如下核心流程</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// load any inserted libraries
+</span></span><span class="line"><span class="cl">if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
+</span></span><span class="line"><span class="cl">	for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
+</span></span><span class="line"><span class="cl">		loadInsertedDylib(*lib);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>loadInsertedDylib</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// 使用动态库注入代码可以参考这个
+</span></span><span class="line"><span class="cl">static void loadInsertedDylib(const char* path)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	ImageLoader* image = NULL;
+</span></span><span class="line"><span class="cl">	unsigned cacheIndex;
+</span></span><span class="line"><span class="cl">	try {
+</span></span><span class="line"><span class="cl">		LoadContext context;
+</span></span><span class="line"><span class="cl">        context.useSearchPaths		= false;
+</span></span><span class="line"><span class="cl">		...
+</span></span><span class="line"><span class="cl">		image = load(path, context, cacheIndex);
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">	catch (const char* msg) {
+</span></span><span class="line"><span class="cl">		...
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样就完成了将lib库以镜像文件的形式加载进来了，并生成对应的Image，只需要在合适的地方进行映射即可。</p>
+<h4 id="链接库">链接库</h4>
+<p>在uintptr_t _main(…) 函数有如下核心流程</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// link any inserted libraries
+</span></span><span class="line"><span class="cl">// do this after linking main executable so that any dylibs pulled in by inserted 
+</span></span><span class="line"><span class="cl">// dylibs (e.g. libSystem) will not be in front of dylibs the program uses
+</span></span><span class="line"><span class="cl">if ( sInsertedDylibCount &gt; 0 ) {
+</span></span><span class="line"><span class="cl">    for(unsigned int i=0; i &lt; sInsertedDylibCount; ++i) {
+</span></span><span class="line"><span class="cl">        ImageLoader* image = sAllImages[i+1];
+</span></span><span class="line"><span class="cl">        link(image, sEnv.DYLD_BIND_AT_LAUNCH, true, ImageLoader::RPathChain(NULL, NULL), -1);
+</span></span><span class="line"><span class="cl">        image-&gt;setNeverUnloadRecursive();
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    // only INSERTED libraries can interpose
+</span></span><span class="line"><span class="cl">    // register interposing info after all inserted libraries are bound so chaining works
+</span></span><span class="line"><span class="cl">    for(unsigned int i=0; i &lt; sInsertedDylibCount; ++i) {
+</span></span><span class="line"><span class="cl">        ImageLoader* image = sAllImages[i+1];
+</span></span><span class="line"><span class="cl">        image-&gt;registerInterposing(gLinkContext);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">// Bind and notify for the inserted images now interposing has been registered
+</span></span><span class="line"><span class="cl">if ( sInsertedDylibCount &gt; 0 ) {
+</span></span><span class="line"><span class="cl">    for(unsigned int i=0; i &lt; sInsertedDylibCount; ++i) {
+</span></span><span class="line"><span class="cl">        ImageLoader* image = sAllImages[i+1];
+</span></span><span class="line"><span class="cl">        image-&gt;recursiveBind(gLinkContext, sEnv.DYLD_BIND_AT_LAUNCH, true);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="遍历-link-images">遍历 link images</h5>
+<ul>
+<li>根据loadInsertedDylib 后的 sInsertedDylibCount，遍历已经加载的动态库；</li>
+<li>根据ImageLoaderMachO::instantiateMainExecutable -&gt; sAllImages遍历执行 ImageLoader* image = sAllImages[i+1];；</li>
+<li>link image
+<ul>
+<li>递归操作</li>
+</ul>
+</li>
+</ul>
+<h5 id="递归插入加载">递归插入/加载</h5>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void ImageLoader::link(const LinkContext&amp; context, bool forceLazysBound, bool preflightOnly, bool neverUnload, const RPathChain&amp; loaderRPaths, const char* imagePath)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">    // 递归加载
+</span></span><span class="line"><span class="cl">	this-&gt;recursiveLoadLibraries(context, preflightOnly, loaderRPaths, imagePath);
+</span></span><span class="line"><span class="cl">	context.notifyBatch(dyld_image_state_dependents_mapped, preflightOnly);
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">	// 递归刷新依赖库的层级
+</span></span><span class="line"><span class="cl">	this-&gt;recursiveUpdateDepth(context.imageCount());
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 符号绑定
+</span></span><span class="line"><span class="cl">	__block uint64_t t2, t3, t4, t5;
+</span></span><span class="line"><span class="cl">	{
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">		this-&gt;recursiveRebase(context);
+</span></span><span class="line"><span class="cl">		context.notifyBatch(dyld_image_state_rebased, false);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		t3 = mach_absolute_time();
+</span></span><span class="line"><span class="cl">		if ( !context.linkingMainExecutable )
+</span></span><span class="line"><span class="cl">			this-&gt;recursiveBindWithAccounting(context, forceLazysBound, neverUnload);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		t4 = mach_absolute_time();
+</span></span><span class="line"><span class="cl">		if ( !context.linkingMainExecutable )
+</span></span><span class="line"><span class="cl">			this-&gt;weakBind(context);
+</span></span><span class="line"><span class="cl">		t5 = mach_absolute_time();
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">	this-&gt;recursiveGetDOFSections(context, dofs);
+</span></span><span class="line"><span class="cl">	context.registerDOFs(dofs);
+</span></span><span class="line"><span class="cl">	uint64_t t7 = mach_absolute_time();	
+</span></span><span class="line"><span class="cl">	// interpose any dynamically loaded images
+</span></span><span class="line"><span class="cl">	if ( !context.linkingMainExecutable &amp;&amp; (fgInterposingTuples.size() != 0) ) {
+</span></span><span class="line"><span class="cl">		dyld3::ScopedTimer timer(DBG_DYLD_TIMING_APPLY_INTERPOSING, 0, 0, 0);
+</span></span><span class="line"><span class="cl">		this-&gt;recursiveApplyInterposing(context);
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="运行所有初始化程序---run-all-initializers">运行所有初始化程序 - run all initializers</h3>
+<ol>
+<li>执行所有插入的dylib执行初始化</li>
+<li>执行主程序初始化</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void initializeMainExecutable()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    ....
+</span></span><span class="line"><span class="cl">	// run initialzers for any inserted dylibs
+</span></span><span class="line"><span class="cl">	ImageLoader::InitializerTimingList initializerTimes[allImagesCount()];
+</span></span><span class="line"><span class="cl">	initializerTimes[0].count = 0;
+</span></span><span class="line"><span class="cl">	const size_t rootCount = sImageRoots.size();
+</span></span><span class="line"><span class="cl">	if ( rootCount &gt; 1 ) {
+</span></span><span class="line"><span class="cl">		for(size_t i=1; i &lt; rootCount; ++i) {
+</span></span><span class="line"><span class="cl">			sImageRoots[i]-&gt;runInitializers(gLinkContext, initializerTimes[0]);
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">	// run initializers for main executable and everything it brings up 
+</span></span><span class="line"><span class="cl">	sMainExecutable-&gt;runInitializers(gLinkContext, initializerTimes[0]);
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="runinitializers">runInitializers</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void ImageLoader::runInitializers(const LinkContext&amp; context, InitializerTimingList&amp; timingInfo)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">	processInitializers(context, thisThread, timingInfo, up);
+</span></span><span class="line"><span class="cl">	context.notifyBatch(dyld_image_state_initialized, false);
+</span></span><span class="line"><span class="cl">	...
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void ImageLoader::processInitializers(const LinkContext&amp; context, mach_port_t thisThread,
+</span></span><span class="line"><span class="cl">									 InitializerTimingList&amp; timingInfo, ImageLoader::UninitedUpwards&amp; images)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    // 初始化准备
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">	// Calling recursive init on all images in images list, building a new list of
+</span></span><span class="line"><span class="cl">	// uninitialized upward dependencies.
+</span></span><span class="line"><span class="cl">    // 遍历初始化
+</span></span><span class="line"><span class="cl">	for (uintptr_t i=0; i &lt; images.count; ++i) {
+</span></span><span class="line"><span class="cl">        // 递归，一个个初始化
+</span></span><span class="line"><span class="cl">		images.images[i]-&gt;recursiveInitialization(context, thisThread, images.images[i]-&gt;getPath(), timingInfo, ups);
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="recursiveinitialization">recursiveInitialization</h5>
+<p><code>notifySingle</code>，通知<code>dyld_image_states</code>状态的改变 <code>doInitialization</code>， 完成初始化</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void ImageLoader::recursiveInitialization(const LinkContext&amp; context, mach_port_t this_thread, const char* pathToInitialize,
+</span></span><span class="line"><span class="cl">										  InitializerTimingList&amp; timingInfo, UninitedUpwards&amp; uninitUps)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	recursive_lock lock_info(this_thread);
+</span></span><span class="line"><span class="cl">	recursiveSpinLock(lock_info);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	if ( fState &lt; dyld_image_state_dependents_initialized-1 ) {
+</span></span><span class="line"><span class="cl">		uint8_t oldState = fState;
+</span></span><span class="line"><span class="cl">		// break cycles
+</span></span><span class="line"><span class="cl">		fState = dyld_image_state_dependents_initialized-1;
+</span></span><span class="line"><span class="cl">		try {
+</span></span><span class="line"><span class="cl">			// initialize lower level libraries first
+</span></span><span class="line"><span class="cl">			....
+</span></span><span class="line"><span class="cl">			
+</span></span><span class="line"><span class="cl">			// let objc know we are about to initialize this image
+</span></span><span class="line"><span class="cl">            ....
+</span></span><span class="line"><span class="cl">			context.notifySingle(dyld_image_state_dependents_initialized, this, &amp;timingInfo);
+</span></span><span class="line"><span class="cl">			
+</span></span><span class="line"><span class="cl">			// initialize this image
+</span></span><span class="line"><span class="cl">			bool hasInitializers = this-&gt;doInitialization(context);
+</span></span><span class="line"><span class="cl">            // let anyone know we finished initializing this image
+</span></span><span class="line"><span class="cl">            ....
+</span></span><span class="line"><span class="cl">			context.notifySingle(dyld_image_state_initialized, this, NULL);
+</span></span><span class="line"><span class="cl">			....
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">	recursiveSpinUnLock();
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="doinitialization">doInitialization</h5>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">bool ImageLoaderMachO::doInitialization(const LinkContext&amp; context)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    ....
+</span></span><span class="line"><span class="cl">	// mach-o has -init and static initializers
+</span></span><span class="line"><span class="cl">	doImageInit(context);
+</span></span><span class="line"><span class="cl">	doModInitFunctions(context);
+</span></span><span class="line"><span class="cl">    ....
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void ImageLoaderMachO::doModInitFunctions(const LinkContext&amp; context)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	if ( fHasInitializers ) {
+</span></span><span class="line"><span class="cl">		const uint32_t cmd_count = ((macho_header*)fMachOData)-&gt;ncmds;
+</span></span><span class="line"><span class="cl">		const struct load_command* const cmds = (struct load_command*)&amp;fMachOData[sizeof(macho_header)];
+</span></span><span class="line"><span class="cl">		const struct load_command* cmd = cmds;
+</span></span><span class="line"><span class="cl">		for (uint32_t i = 0; i &lt; cmd_count; ++i) {
+</span></span><span class="line"><span class="cl">			if ( cmd-&gt;cmd == LC_SEGMENT_COMMAND ) {
+</span></span><span class="line"><span class="cl">				for (const struct macho_section* sect=sectionsStart; sect &lt; sectionsEnd; ++sect) {
+</span></span><span class="line"><span class="cl">					const uint8_t type = sect-&gt;flags &amp; SECTION_TYPE;
+</span></span><span class="line"><span class="cl">					...
+</span></span><span class="line"><span class="cl">                    Initializer* inits = (Initializer*)(sect-&gt;addr + fSlide);
+</span></span><span class="line"><span class="cl">                    ...
+</span></span><span class="line"><span class="cl">                    for (size_t j=0; j &lt; count; ++j) {
+</span></span><span class="line"><span class="cl">                        Initializer func = inits[j];
+</span></span><span class="line"><span class="cl">                        ....
+</span></span><span class="line"><span class="cl">                    }
+</span></span><span class="line"><span class="cl">                    ....
+</span></span><span class="line"><span class="cl">				}
+</span></span><span class="line"><span class="cl">			}
+</span></span><span class="line"><span class="cl">			cmd = (const struct load_command*)(((char*)cmd)+cmd-&gt;cmdsize);
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="notifysingle">notifySingle</h5>
+<p>这里(*sNotifyObjCInit)(image-&gt;getRealPath(), image-&gt;machHeader());就是获取函数指针地址，执行对应的函数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">static void notifySingle(dyld_image_states state, const ImageLoader* image, ImageLoader::InitializerTimingList* timingInfo)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">   //dyld::log(&#34;notifySingle(state=%d, image=%s)\n&#34;, state, image-&gt;getPath());
+</span></span><span class="line"><span class="cl">   ....
+</span></span><span class="line"><span class="cl">   if ( state == dyld_image_state_mapped ) {
+</span></span><span class="line"><span class="cl">   	....
+</span></span><span class="line"><span class="cl">   }
+</span></span><span class="line"><span class="cl">   if ( (state == dyld_image_state_dependents_initialized) &amp;&amp; (sNotifyObjCInit != NULL) &amp;&amp; image-&gt;notifyObjC() ) {
+</span></span><span class="line"><span class="cl">   	....
+</span></span><span class="line"><span class="cl">       (*sNotifyObjCInit)(image-&gt;getRealPath(), image-&gt;machHeader());
+</span></span><span class="line"><span class="cl">   	....
+</span></span><span class="line"><span class="cl">   }
+</span></span><span class="line"><span class="cl">   // mach message csdlc about dynamically unloaded images
+</span></span><span class="line"><span class="cl">   if ( image-&gt;addFuncNotified() &amp;&amp; (state == dyld_image_state_terminated) ) {
+</span></span><span class="line"><span class="cl">   	....
+</span></span><span class="line"><span class="cl">   	notifyMonitoringDyld(true, 1, loadAddress, loadPath);
+</span></span><span class="line"><span class="cl">   }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以到此，可以看出<code>sNotifyObjCInit</code>是一个c函数指针地址，dyld通过获取到<code>libobjc</code>函数指针，可以执行到<code>libobjc</code>里面。 在dyld源码中全局搜索<code>sNotifyObjCInit</code>,可以找到<code>sNotifyObjCInit</code>赋值的地方发生在<code>registerObjCNotifiers</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void registerObjCNotifiers(_dyld_objc_notify_mapped mapped, _dyld_objc_notify_init init, _dyld_objc_notify_unmapped unmapped)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	// record functions to call
+</span></span><span class="line"><span class="cl">	sNotifyObjCMapped	= mapped;
+</span></span><span class="line"><span class="cl">	sNotifyObjCInit		= init;
+</span></span><span class="line"><span class="cl">	sNotifyObjCUnmapped = unmapped;
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">	// &lt;rdar://problem/32209809&gt; call &#39;init&#39; function on all images already init&#39;ed (below libSystem)
+</span></span><span class="line"><span class="cl">	for (std::vector&lt;ImageLoader*&gt;::iterator it=sAllImages.begin(); it != sAllImages.end(); it++) {
+</span></span><span class="line"><span class="cl">		ImageLoader* image = *it;
+</span></span><span class="line"><span class="cl">		if ( (image-&gt;getState() == dyld_image_state_initialized) &amp;&amp; image-&gt;notifyObjC() ) {
+</span></span><span class="line"><span class="cl">			dyld3::ScopedTimer timer(DBG_DYLD_TIMING_OBJC_INIT, (uint64_t)image-&gt;machHeader(), 0, 0);
+</span></span><span class="line"><span class="cl">			(*sNotifyObjCInit)(image-&gt;getRealPath(), image-&gt;machHeader());
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">void _dyld_objc_notify_register(_dyld_objc_notify_mapped    mapped,
+</span></span><span class="line"><span class="cl">                                _dyld_objc_notify_init      init,
+</span></span><span class="line"><span class="cl">                                _dyld_objc_notify_unmapped  unmapped)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	dyld::registerObjCNotifiers(mapped, init, unmapped);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>进一步在dyld中查找<code>registerObjCNotifiers</code>,<code>_dyld_objc_notify_register</code>，可以分析出，这个<code>register</code>函数是<code>extern</code>，并不是在dyld发起调用的。至于到底在哪里调用，后面会详细说明。</p>
+<h3 id="回调监听">回调监听</h3>
+<h4 id="可以猜测流程">可以猜测流程</h4>
+<p>到此可以猜测，<code>dyld -&gt; libobjc</code> 的方式是通过这种函数指针的方式进行通信, 应该是libobjc在某个地方进行了<code>registerObjCNotifiers</code>，这样<code>dyld start</code>后，根据上述流程，即可跳转到libobjc。这种不同库之间 <code>register-notify</code>的方式进行通信的完成代码调用的，明显代码在一个库里面一行行跟进代码是行不通的。所以接下来需要捋一下思路。</p>
+<h4 id="提出疑问">提出疑问</h4>
+<p>那么现在有疑问</p>
+<ol>
+<li>OC怎么将自己的函数指针传给dyld的呢？</li>
+<li>OC又是在什么时候完成注册的呢？</li>
+<li>OC-dyld之间的相互通信是如何配合的呢？</li>
+</ol>
+<h2 id="libobjc-启动核心源码分析">libobjc 启动核心源码分析</h2>
+<p>直接从苹果官网下载libobjc源码。</p>
+<h3 id="找到-_dyld_objc_notify_register-入口">找到 _dyld_objc_notify_register 入口</h3>
+<p>在dyld源码分析中，能看出libobjc是通过 调用_dyld_objc_notify_register来完成注册的。在libobjc源码中搜索_dyld_objc_notify_register,发现其在_objc_init里调用，完成的向dyld注册函数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void _objc_init(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    ....
+</span></span><span class="line"><span class="cl">    _dyld_objc_notify_register(&amp;map_images, load_images, unmap_image);
+</span></span><span class="line"><span class="cl">    ....
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过<code>_dyld_objc_notify_register(&amp;map_images, load_images, unmap_image)</code> 可以快速解答了前面问题1（什么时候注册）和问题2（如何注册）。 并且我们也能看到dyld里面的<code>sNotifyObjCInit</code>即是<code>libobjc</code>的<code>load_images</code>函数，<code>sNotifyObjCMapped</code>是<code>map_images</code>函数。 现在又有新的问题产生了，虽然明确了<code>libobjc</code>向<code>dyld</code>注册函数发生在<code>_objc_init</code>里面，但是<code>_objc_init</code>到底什么时候触发的还是不知道。</p>
+<h3 id="build--run-libobjc">build &amp; run libobjc</h3>
+<p>然后根据自己的Xcode和系统版本，将libobjc源码build，并run起来。这里就不做详细介绍）</p>
+<blockquote>
+<p><a class="link" href="objc818-canrun.zip" >objc818-canrun for Bigsur</a>
+<a class="link" href="objc818-canrun.zip" >objc838-canrun for Monterey</a>
+在这里可以自己根据当前环境找一个源码尝试跑一个。
+跑源码简单的思路就是在github上把源码down下来，然后直接build，那种找不到符号的报错直接先注释，找不到文件的去apple的open source搜索下，如果找到了，就添加到自己的工程下面。基本这样操作完了，就没error了，然后新建一个target, 将objc库添加到target的Dependencies 里面。如下图所示。
+<img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693800524951.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693800524951_hu081b45b4958526e060399f25c13811d4_97727_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693800524951_hu081b45b4958526e060399f25c13811d4_97727_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+></p>
+</blockquote>
+<p>为了明确_objc_init的调用时机，简单的思路就是在_objc_init里面加一个断点，看堆栈。</p>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693801720569.jpg"
+	width="1024"
+	height="640"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693801720569_hub0f813d565a6228ad7209a42a9b7f8b5_197975_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693801720569_hub0f813d565a6228ad7209a42a9b7f8b5_197975_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="160"
+		data-flex-basis="384px"
+	
+></p>
+<h3 id="确认基础流程">确认基础流程</h3>
+<p><code>dyld</code> -&gt;<code>libsystem</code> -&gt;<code>libdispatch</code> -&gt;<code>libobjc</code> -&gt;<code>_objc_init</code></p>
+<p>从打印的详细堆栈信息看，<code>dyld_dyld_start</code>-&gt; …. -&gt;<code>ImageLoaderMachO::doModInitFunction</code>这个过程的流程正好跟前面dyld 源码分析的过程吻合上了。后面是<code>libSystem.B.dylib</code> <code>libSystem_initializer</code>(猜测这个过程应该是<code>doModInitFunction</code>里面调起的) -&gt;<code>libdispatch</code>-&gt;<code>libobjc</code></p>
+<p>在<code>dyld</code>中的搜索<code>image-&gt;getRealPath()</code> 基本可以确定<code>libobjc</code>注册的函数的调用时机。在<code>notifyBatchPartial</code>和<code>notifySingle</code>根据<code>dyld_image_states</code>触发不同的注册函数。</p>
+<blockquote>
+<p>dyld_image_state_bound 触发 libjobcmap_images dyld_image_state_initialized 触发libobjc load_images</p>
+</blockquote>
+<h2 id="验证流程---配合libsytem源码libdispatch源码">验证流程 - 配合libSytem源码，libdispatch源码</h2>
+<p>在前面<code>dyld</code>已经分析到了<code>doModInitFunctions</code>里面</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">....
+</span></span><span class="line"><span class="cl">Initializer* inits = (Initializer*)(sect-&gt;addr + fSlide);
+</span></span><span class="line"><span class="cl">....
+</span></span><span class="line"><span class="cl">Initializer func = inits[j];
+</span></span><span class="line"><span class="cl">// &lt;rdar://problem/8543820&amp;9228031&gt; verify initializers are in image
+</span></span><span class="line"><span class="cl">if ( ! this-&gt;containsAddress(stripPointer((void*)func)) ) {
+</span></span><span class="line"><span class="cl">  dyld::throwf(&#34;initializer function %p not in mapped image for %s\n&#34;, func, this-&gt;getPath());
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">if ( ! dyld::gProcessInfo-&gt;libSystemInitialized ) {
+</span></span><span class="line"><span class="cl">  // &lt;rdar://problem/17973316&gt; libSystem initializer must run first
+</span></span><span class="line"><span class="cl">  const char* installPath = getInstallPath();
+</span></span><span class="line"><span class="cl">  if ( (installPath == NULL) || (strcmp(installPath, LIBSYSTEM_DYLIB_PATH) != 0) )
+</span></span><span class="line"><span class="cl">    dyld::throwf(&#34;initializer in image (%s) that does not link with libSystem.dylib\n&#34;, this-&gt;getPath());
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">if ( context.verboseInit )
+</span></span><span class="line"><span class="cl">  dyld::log(&#34;dyld: calling initializer function %p in %s\n&#34;, func, this-&gt;getPath());
+</span></span><span class="line"><span class="cl">bool haveLibSystemHelpersBefore = (dyld::gLibSystemHelpers != NULL);
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  dyld3::ScopedTimer(DBG_DYLD_TIMING_STATIC_INITIALIZER, (uint64_t)fMachOData, (uint64_t)func, 0);
+</span></span><span class="line"><span class="cl">  func(context.argc, context.argv, context.envp, context.apple, &amp;context.programVars);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>dyld</code>确实要走并确定先到<code>libSystem</code>的<code>initializer</code></p>
+<h3 id="dyld-初始化必须确保先完成-libsystem-初始化">dyld 初始化必须确保先完成 libSystem 初始化</h3>
+<p>回到dyld 的doModInitFunctions的部分代码</p>
+<h3 id="libsytem-initializer">libSytem initializer</h3>
+<p>再到<code>libSystem</code>源码中搜索<code>initializer</code>，确定入口 <code>libSystem_initializer</code>,接下来就是一个个方法跟踪查看，最终可以看出流程为 <code>libSystem_initializer</code>-&gt; <code>libdispatch_init</code></p>
+<h3 id="libdispatch_init">libdispatch_init</h3>
+<p>到<code>libdispatch</code>源码中常规分析思路，最终流程为 <code>libdispatch_init</code>-&gt; <code>_os_object_init</code>-&gt; <code>_objc_init</code> 到这里，通过源码也验证了 上述堆栈的流程。</p>
+<h2 id="启动完整流程">启动完整流程</h2>
+<h3 id="简化流程图">简化流程图</h3>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805296135.jpg"
+	width="1024"
+	height="549"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805296135_hu20f457bb2a495be92f7cd7b0e4eb4e26_56472_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805296135_hu20f457bb2a495be92f7cd7b0e4eb4e26_56472_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="186"
+		data-flex-basis="447px"
+	
+></p>
+<h3 id="详细流程图">详细流程图</h3>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933.jpg"
+	width="1024"
+	height="619"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="165"
+		data-flex-basis="397px"
+	
+></p>
+<h2 id="实际应用">实际应用</h2>
+<h3 id="main之前---调试--监测">main之前 - 调试 &amp; 监测</h3>
+<h4 id="xcode打印pre-main的时间开发环境xcode-dyld_print_statics--1">Xcode打印pre-main的时间：开发环境Xcode DYLD_PRINT_STATICS = 1</h4>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805852615.jpg"
+	width="1024"
+	height="278"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805852615_hub2a93ebef1094fa0f88cc40e01cee0d2_101974_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805852615_hub2a93ebef1094fa0f88cc40e01cee0d2_101974_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="368"
+		data-flex-basis="884px"
+	
+></p>
+<ol>
+<li><code>dylid loading time</code>:动态库加载时间，载入动态库,尽可能使用系统库,自定义库，最好不要大于6个（apple推荐）</li>
+<li>rebase（修正偏移指针 ASLR-修复内部指针） / binding time （外部符号绑定）:（fishhook）</li>
+<li><code>Objc set up time</code>， 减少OC类，有统计2万个oc类增加800毫秒，swift比OC的效率更高，删除弃用的类（找工具检测）</li>
+<li><code>initializer time load</code>方法 懒加载，尽量放在<code>initialize</code> 去调用</li>
+<li><code>slowest initializer</code>:最慢的几个库的时间</li>
+<li><code>libsystem</code></li>
+</ol>
+<h4 id="instrument---systemtrace--timeprofiler">Instrument - SystemTrace / TimeProfiler</h4>
+<p>会记录启动的一些信息</p>
+<h4 id="xcode配置linkmap拿到linkmap文件分析">Xcode配置LinkMap，拿到LinkMap文件，分析</h4>
+<p><img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693807063070.jpg"
+	width="1024"
+	height="419"
+	srcset="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693807063070_hu282fae3aa909e21319b61c0a0351cbbf_48865_480x0_resize_q75_box.jpg 480w, /p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693807063070_hu282fae3aa909e21319b61c0a0351cbbf_48865_1024x0_resize_q75_box.jpg 1024w"
+	loading="lazy"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="244"
+		data-flex-basis="586px"
+	
+></p>
+<h4 id="其他12不推荐开拓思路">其他（1，2不推荐，开拓思路）</h4>
+<ol>
+<li>定时抓取主线程上的方法调用堆栈（backtrace），计算一段时间里各个方法的耗时。</li>
+<li>hook objc_msgSend 方法进行hook，掌握所有方法的执行耗时 （libffi, facebook fishhook）</li>
+<li>在启动的相关时机插入自定义的动态库，配合技术埋点</li>
+<li>Apple-Metrics（可自定义） 配合分析线上</li>
+</ol>
+<h2 id="objc源码下载">objc源码下载</h2>
+<h3 id="objc818">objc818</h3>
+<p><a class="link" href="objc818-canrun.zip" >objc818-canrun</a></p>
+<h3 id="objc838">objc838</h3>
+<p><a class="link" href="objc838-canrun.zip" >objc838-canrun</a></p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    
+    <section class="article-copyright">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <path d="M14.5 9a3.5 4 0 1 0 0 6" />
+</svg>
+
+
+
+        <span>Licensed under CC BY-NC-SA 4.0</span>
+    </section>
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="">
+    <a href="/p/%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/">
+        
+        
+
+        <div class="article-details">
+            <h2 class="article-title">消息发送源码学习</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="">
+    <a href="/p/%E5%88%86%E6%9E%90-%E5%9C%A8oc%E4%B8%AD-self-class-%E4%B8%8E-super-class-%E7%9A%84%E5%8C%BA%E5%88%AB/">
+        
+        
+
+        <div class="article-details">
+            <h2 class="article-title">分析 在OC中 [self class] 与 [super class] 的区别</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+    <div class="disqus-container">
+    <div id="disqus_thread"></div>
+<script type="application/javascript">
+    window.disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "hugo-theme-stack" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div>
+
+<style>
+    .disqus-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+    }
+</style>
+
+<script>
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (typeof DISQUS == 'object') {
+            DISQUS.reset({
+                reload: true
+            });
+        }
+    })
+</script>
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+            2018 - 
+        
+        2022 YoyoWong
+    </section>
+    
+    <section class="powerby">
+        
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
