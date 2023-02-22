@@ -22,11 +22,13 @@
         <guid>/categories/mac/</guid>
         <description></description>
         </item>
+        <item>
+        <title>面试</title>
+        <link>/categories/%E9%9D%A2%E8%AF%95/</link>
+        <pubDate>Fri, 15 Mar 2019 00:00:00 +0000</pubDate>
         
-    </channel>
-</rss>
-t;&lt;a class=&#34;link&#34; href=&#34;objc838-canrun.zip&#34; &gt;objc838-canrun&lt;/a&gt;&lt;/p&gt;
-</description>
+        <guid>/categories/%E9%9D%A2%E8%AF%95/</guid>
+        <description></description>
         </item>
         
     </channel>

@@ -1,21 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-cn" dir="ltr">
     <head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='hugo 生成静态页面 hugo server http://127.0.0.1:1313/ 本地预览
-1 2 3 4 5 6 7 8 9 10 11 12 #!/bin/bash cd /Users/wangmingyou/personal-blog hugo rm -rf ../wangmy.github.io/* mv ./public/* ../wangmy.github.io/ rm -rf ./public cd ../wangmy.github.io/ git add . git commit -m &amp;#34;rebuilding site $(date)&amp;#34; git push -u &#43;master main cd - '>
-<title></title>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='This is an example category'>
+<title>iOS源码学习</title>
 
-<link rel='canonical' href='/readme/'>
+<link rel='canonical' href='/p/ios%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/'>
 
-<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content=''>
-<meta property='og:description' content='hugo 生成静态页面 hugo server http://127.0.0.1:1313/ 本地预览
-1 2 3 4 5 6 7 8 9 10 11 12 #!/bin/bash cd /Users/wangmingyou/personal-blog hugo rm -rf ../wangmy.github.io/* mv ./public/* ../wangmy.github.io/ rm -rf ./public cd ../wangmy.github.io/ git add . git commit -m &amp;#34;rebuilding site $(date)&amp;#34; git push -u &#43;master main cd - '>
-<meta property='og:url' content='/readme/'>
+<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content='iOS源码学习'>
+<meta property='og:description' content='This is an example category'>
+<meta property='og:url' content='/p/ios%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/'>
 <meta property='og:site_name' content='YoyoWong'>
-<meta property='og:type' content='article'><meta property='article:section' content='' />
-<meta name="twitter:title" content="">
-<meta name="twitter:description" content="hugo 生成静态页面 hugo server http://127.0.0.1:1313/ 本地预览
-1 2 3 4 5 6 7 8 9 10 11 12 #!/bin/bash cd /Users/wangmingyou/personal-blog hugo rm -rf ../wangmy.github.io/* mv ./public/* ../wangmy.github.io/ rm -rf ./public cd ../wangmy.github.io/ git add . git commit -m &amp;#34;rebuilding site $(date)&amp;#34; git push -u &#43;master main cd - ">
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2023-01-25T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2023-01-25T00:00:00&#43;00:00'/>
+<meta name="twitter:title" content="iOS源码学习">
+<meta name="twitter:description" content="This is an example category">
     </head>
     <body class="
     article-page
@@ -225,7 +222,43 @@
     </ol>
 </aside>
 
-    
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li><a href="#objc源码">objc源码</a>
+      <ol>
+        <li><a href="#objc818">objc818</a></li>
+        <li><a href="#objc838">objc838</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
 
             <main class="main full-width">
     <article class="main-article">
@@ -233,12 +266,24 @@
 
     <div class="article-details">
     
+    <header class="article-category">
+        
+            <a href="/categories/ios/" >
+                iOS
+            </a>
+        
+    </header>
+    
 
     <div class="article-title-wrapper">
         <h2 class="article-title">
-            <a href="/readme/"></a>
+            <a href="/p/ios%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/">iOS源码学习</a>
         </h2>
     
+        
+        <h3 class="article-subtitle">
+            This is an example category
+        </h3>
         
     </div>
 
@@ -247,6 +292,19 @@
     
     
     <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Jan 25, 2023</time>
+            </div>
         
 
         
@@ -275,40 +333,12 @@
     <section class="article-content">
     
     
-    <p>hugo 生成静态页面
-hugo server
-http://127.0.0.1:1313/ 本地预览</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/bin/bash
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> /Users/wangmingyou/personal-blog
-</span></span><span class="line"><span class="cl">hugo
-</span></span><span class="line"><span class="cl">rm -rf ../wangmy.github.io/*
-</span></span><span class="line"><span class="cl">mv ./public/* ../wangmy.github.io/
-</span></span><span class="line"><span class="cl">rm -rf ./public
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> ../wangmy.github.io/
-</span></span><span class="line"><span class="cl">git add .
-</span></span><span class="line"><span class="cl">git commit -m <span class="s2">&#34;rebuilding site </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&#34;</span>
-</span></span><span class="line"><span class="cl">git push -u +master main
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> -
-</span></span></code></pre></td></tr></table>
-</div>
-</div>
+    <h2 id="objc源码">objc源码</h2>
+<h3 id="objc818">objc818</h3>
+<p><a class="link" href="objc818-canrun.zip" >objc818-canrun</a></p>
+<h3 id="objc838">objc838</h3>
+<p><a class="link" href="objc838-canrun.zip" >objc838-canrun</a></p>
+
 </section>
 
 
@@ -336,6 +366,65 @@ http://127.0.0.1:1313/ 本地预览</p>
     
 
     
+
+<aside class="related-content--wrapper">
+    <h2 class="section-title">相关文章</h2>
+    <div class="related-content">
+        <div class="flex article-list--tile">
+            
+                
+<article class="has-image">
+    <a href="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/">
+        
+        
+            <div class="article-image">
+                <img src="/p/ios%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8A%A0%E8%BD%BD/16693805489933.41cdf52967f1600b7287c24c6054ae0d_hu0cfc4d1f5c3e28c9d5ab40ace509f822_113354_250x150_fill_q75_box_smart1.jpg" 
+                        width="250" 
+                        height="150" 
+                        loading="lazy"
+                        alt="Featured image of post iOS应用程序加载"
+                        
+                        data-hash="md5-Qc31KWfxYAtyh8JMYFSuDQ==">
+                
+            </div>
+        
+
+        <div class="article-details">
+            <h2 class="article-title">iOS应用程序加载</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="">
+    <a href="/p/%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/">
+        
+        
+
+        <div class="article-details">
+            <h2 class="article-title">消息发送源码学习</h2>
+        </div>
+    </a>
+</article>
+
+            
+                
+<article class="">
+    <a href="/p/%E5%88%86%E6%9E%90-%E5%9C%A8oc%E4%B8%AD-self-class-%E4%B8%8E-super-class-%E7%9A%84%E5%8C%BA%E5%88%AB/">
+        
+        
+
+        <div class="article-details">
+            <h2 class="article-title">分析 在OC中 [self class] 与 [super class] 的区别</h2>
+        </div>
+    </a>
+</article>
+
+            
+        </div>
+    </div>
+</aside>
 
      
     
